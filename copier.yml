@@ -56,3 +56,13 @@ include_license:
   type: bool
   help: "Include empty LICENSE file?"
   default: false
+
+include_precommit:
+  type: bool
+  help: "Include empty .pre-commit-config.yaml?"
+  default: false
+
+include_github_actions:
+  type: bool
+  help: "Include empty GitHub Action workflows (.github/workflows)?"
+  default: false

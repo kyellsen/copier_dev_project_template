@@ -1,0 +1,21 @@
+{
+  "recommendations": [
+    // 🐍 Python & Quality Assurance
+    "ms-python.python",
+    "astral-sh.ruff",
+    "ms-python.mypy-type-checker",
+    "tamasfe.even-better-toml",
+    
+    // ⚙️ Configurations & Env
+    "redhat.vscode-yaml",
+    "mikestead.dotenv",
+    
+    // 🐚 Shell & Scripts
+    "timonwong.shellcheck",
+    "foxundermoon.shell-format",
+    
+    // 🛠️ General Productivity
+    "eamodio.gitlens",
+    "yzhang.markdown-all-in-one"
+  ]
+}
