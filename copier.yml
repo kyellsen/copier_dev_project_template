@@ -15,6 +15,11 @@ python_module_name:
   default: "{{ project_name | replace('-', '_') | lower }}"
   when: false
 
+python_version:
+  type: str
+  help: "Minimum Python version (e.g., 3.13)"
+  default: "3.13"
+
 description:
   type: str
   help: "Short description of the project"
@@ -41,3 +46,13 @@ include_external_data:
   type: bool
   help: "Connect to external Nextcloud data and dev_workspaces? (uses .env)"
   default: true
+
+include_vision_roadmap:
+  type: bool
+  help: "Include empty ROADMAP.md and VISION.md files?"
+  default: false
+
+include_license:
+  type: bool
+  help: "Include empty LICENSE file?"
+  default: false

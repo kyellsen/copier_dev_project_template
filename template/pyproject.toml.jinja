@@ -5,7 +5,7 @@ description = "{{ description }}"
 authors = [
     { name = "{{ author }}", email = "{{ author_email }}" }
 ]
-requires-python = ">=3.13"
+requires-python = ">={{ python_version }}"
 dependencies = [
     "python-dotenv>=1.0",
     # Uncomment data science dependencies as needed:
@@ -33,9 +33,9 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py{{ python_version | replace('.', '') }}"
 
 [tool.mypy]
 strict = true
-python_version = "3.13"
+python_version = "{{ python_version }}"
 ignore_missing_imports = true
