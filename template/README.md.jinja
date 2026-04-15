@@ -1,0 +1,29 @@
+# {{ project_name }}
+
+> {{ description }}
+
+**Author:** {{ author }} ({{ author_email }})
+
+## 🚀 Quickstart
+
+This project is built with [uv](https://github.com/astral-sh/uv) and [just](https://github.com/casey/just).
+
+```bash
+# 1. Install all dependencies
+just setup
+
+# 2. Start Jupyter Lab
+just lab
+
+# 3. Run all tests and linters
+just lint
+just test
+```
+
+## 📂 Structure
+
+- `src/{{ python_module_name }}/` - Main Python source code
+- `notebooks/` - Jupyter notebooks for exploration
+- `tests/` - Pytest suite
+{% if include_external_data %}- `.env` - Local environment variables (paths to external data & workspaces)
+{% endif %}

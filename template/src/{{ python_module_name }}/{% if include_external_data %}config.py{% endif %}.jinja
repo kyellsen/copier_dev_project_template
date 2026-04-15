@@ -1,0 +1,17 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Project Root (three files up: src / module / config.py -> root)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+# Load variables from .env if present
+load_dotenv(PROJECT_ROOT / ".env")
+
+# Workspace Directory (from .env)
+WORKSPACE_ROOT_STR = os.environ.get("WORKSPACE_ROOT")
+if not WORKSPACE_ROOT_STR:
+    raise ValueError("WORKSPACE_ROOT is not set in .env")
+
+WORKSPACE = Path(WORKSPACE_ROOT_STR)
+WORKSPACE.mkdir(parents=True, exist_ok=True)

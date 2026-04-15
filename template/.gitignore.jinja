@@ -1,0 +1,39 @@
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# === Project Setup ===
+.env
+
+# === Jupyter ===
+.ipynb_checkpoints/
+
+# === Typing & Formatting ===
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+{% if include_latex %}# === LaTeX ===
+thesis/build/
+thesis/figures/
+thesis/tables/
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.synctex.gz
+{% endif %}
+
+# === OS & IDE ===
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db

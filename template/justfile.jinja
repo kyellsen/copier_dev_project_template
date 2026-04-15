@@ -1,0 +1,35 @@
+set dotenv-load
+
+# === Default ===
+default:
+    @just --list
+
+# === Setup ===
+setup:
+    uv sync
+    @echo "✓ Dependencies installed"
+{% if include_external_data %}    @test -f .env || (cp .env.example .env && echo "✓ Created .env file (please fill in the paths!)")
+{% endif %}
+# === Quality Assurance ===
+lint:
+    uv run ruff check src/
+    uv run mypy src/
+
+format:
+    uv run ruff format src/
+    uv run ruff check --fix src/
+
+test:
+    uv run pytest tests/
+
+# === Interactive ===
+lab:
+    uv run jupyter lab
+
+# === Workspace ===
+{% if include_external_data %}clean-workspace:
+    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace \${WORKSPACE_ROOT} cleaned." || echo "✗ Workspace not found"
+{% else %}clean-cache:
+    rm -rf .ruff_cache .mypy_cache .pytest_cache
+    @echo "✓ Caches cleaned."
+{% endif %}

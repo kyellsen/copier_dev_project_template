@@ -1,0 +1,43 @@
+_min_copier_version: "9.0.0"
+_subdirectory: template
+_exclude:
+  - "**/.gitkeep"
+
+# ==================== Questions ====================
+
+project_name:
+  type: str
+  help: "Project name (used for the directory name)"
+  default: "my-analysis"
+
+python_module_name:
+  type: str
+  default: "{{ project_name | replace('-', '_') | lower }}"
+  when: false
+
+description:
+  type: str
+  help: "Short description of the project"
+  default: ""
+
+author:
+  type: str
+  default: "Kyell Jensen"
+  when: false
+
+author_email:
+  type: str
+  default: "mail@kyelljensen.de"
+  when: false
+
+# --- Optional Modules ---
+
+include_latex:
+  type: bool
+  help: "Include LaTeX / Thesis setup directory?"
+  default: false
+
+include_external_data:
+  type: bool
+  help: "Connect to external Nextcloud data and dev_workspaces? (uses .env)"
+  default: true
