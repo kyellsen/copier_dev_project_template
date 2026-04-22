@@ -26,13 +26,13 @@ format:
 
 # === Testing ===
 test-unit:
-    uv run pytest tests/unit/ -m unit
+    uv run pytest tests/unit/ -m unit || test $? -eq 5
 
 test-int:
-    uv run pytest tests/integration/ -m integration
+    uv run pytest tests/integration/ -m integration || test $? -eq 5
 
 test-system:
-    uv run pytest tests/system/ -m system
+    uv run pytest tests/system/ -m system || test $? -eq 5
 
 test: test-unit test-int
 
