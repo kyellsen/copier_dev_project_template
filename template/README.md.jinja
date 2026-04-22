@@ -9,15 +9,20 @@
 This project is built with [uv](https://github.com/astral-sh/uv) and [just](https://github.com/casey/just).
 
 ```bash
-# 1. Install all dependencies
+# 1. Install dependencies{% if include_external_data %} & create .env{% endif %}
 just setup
+{% if include_external_data %}
+# 2. Add your external data paths to the new .env file
+nano .env
 
-# 2. Start Jupyter Lab
-just lab
+# 3. Verify your environment
+just check-env
 
-# 3. Run all tests and linters
+# 4. Start Jupyter Lab or run tools
+{% else %}
+# 2. Start Jupyter Lab or run tools
+{% endif %}just lab
 just lint
-just test
 ```
 
 ## 📂 Structure

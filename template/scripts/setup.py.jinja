@@ -1,0 +1,30 @@
+"""Project setup script. Called by: just setup"""
+import subprocess
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def main() -> None:
+    # 1. Install dependencies
+    subprocess.run(["uv", "sync"], check=True, cwd=PROJECT_ROOT)
+    print("✓ Dependencies installed")
+{% if include_external_data %}
+    # 2. Create .env if missing
+    env_file = PROJECT_ROOT / ".env"
+    env_example = PROJECT_ROOT / ".env.example"
+    if not env_file.exists() and env_example.exists():
+        env_file.write_text(env_example.read_text())
+        print("⚠️  Created .env file — please fill in the data paths!")
+{% endif %}{% if workspace_is_internal %}
+    # 3. Create workspace directories
+    for subdir in ["output/figures", "output/tables"]:
+        (PROJECT_ROOT / "_workspace" / subdir).mkdir(parents=True, exist_ok=True)
+    print("✓ Workspace directory ready (_workspace/)")
+{% endif %}
+    print("✓ Setup complete")
+
+
+if __name__ == "__main__":
+    main()

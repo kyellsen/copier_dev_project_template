@@ -6,12 +6,7 @@ default:
 
 # === Setup ===
 setup:
-    uv sync
-    @echo "✓ Dependencies installed"
-{% if include_external_data %}    @test -f .env || (cp .env.example .env && echo "⚠️  Created .env file — please fill in the data paths!")
-{% endif %}{% if workspace_is_internal %}    @mkdir -p _workspace/output/figures _workspace/output/tables
-    @echo "✓ Workspace directory ready (_workspace/)"
-{% endif %}
+    uv run python scripts/setup.py
 {% if include_external_data %}
 # === Environment Check ===
 check-env:
@@ -20,7 +15,6 @@ check-env:
     @echo "✓ WORKSPACE_ROOT = ${WORKSPACE_ROOT}"
 {% endif %}    @echo "✓ Umgebung ok"
 {% endif %}
-
 # === Quality Assurance ===
 lint:
     uv run ruff check src/
