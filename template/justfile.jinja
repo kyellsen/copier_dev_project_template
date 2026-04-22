@@ -42,7 +42,19 @@ test-all: test-unit test-int test-system
 lab:
     uv run jupyter lab
 
-# === Workspace ===
+{% if include_latex %}# === LaTeX ===
+publication:
+    cd publication && latexmk -pdf -outdir=build -interaction=nonstopmode main.tex
+publication-clean:
+    cd publication && latexmk -C -outdir=build
+publication-watch:
+    cd publication && latexmk -pdf -pvc -outdir=build main.tex
+
+# === Freeze ===
+freeze:
+    uv run python scripts/freeze.py
+
+{% endif %}# === Workspace ===
 {% if workspace_is_internal %}clean-workspace:
     rm -rf _workspace/*
     @mkdir -p _workspace/output/figures _workspace/output/tables
