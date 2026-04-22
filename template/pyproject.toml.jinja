@@ -39,3 +39,14 @@ target-version = "py{{ python_version | replace('.', '') }}"
 strict = true
 python_version = "{{ python_version }}"
 ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --import-mode=importlib"
+markers = [
+    "unit: Fast, isolated tests without I/O or external dependencies.",
+    "integration: Tests that interact with filesystem, databases, or external data.",
+    "system: Full pipeline end-to-end tests.",
+]

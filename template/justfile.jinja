@@ -24,8 +24,19 @@ format:
     uv run ruff format src/
     uv run ruff check --fix src/
 
-test:
-    uv run pytest tests/
+# === Testing ===
+test-unit:
+    uv run pytest tests/unit/ -m unit
+
+test-int:
+    uv run pytest tests/integration/ -m integration
+
+test-system:
+    uv run pytest tests/system/ -m system
+
+test: test-unit test-int
+
+test-all: test-unit test-int test-system
 
 # === Interactive ===
 lab:
