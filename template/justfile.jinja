@@ -8,8 +8,19 @@ default:
 setup:
     uv sync
     @echo "✓ Dependencies installed"
-{% if include_external_data %}    @test -f .env || (cp .env.example .env && echo "✓ Created .env file (please fill in the paths!)")
+{% if include_external_data %}    @test -f .env || (cp .env.example .env && echo "⚠️  Created .env file — please fill in the data paths!")
+{% endif %}{% if workspace_is_internal %}    @mkdir -p _workspace/output/figures _workspace/output/tables
+    @echo "✓ Workspace directory ready (_workspace/)"
 {% endif %}
+{% if include_external_data %}
+# === Environment Check ===
+check-env:
+    @test -f .env || (echo "✗ .env fehlt! Kopiere .env.example → .env" && exit 1)
+{% if not workspace_is_internal %}    @test -n "${WORKSPACE_ROOT}" || (echo "✗ WORKSPACE_ROOT fehlt in .env" && exit 1)
+    @echo "✓ WORKSPACE_ROOT = ${WORKSPACE_ROOT}"
+{% endif %}    @echo "✓ Umgebung ok"
+{% endif %}
+
 # === Quality Assurance ===
 lint:
     uv run ruff check src/
@@ -27,9 +38,10 @@ lab:
     uv run jupyter lab
 
 # === Workspace ===
-{% if include_external_data %}clean-workspace:
-    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace \${WORKSPACE_ROOT} cleaned." || echo "✗ Workspace not found"
-{% else %}clean-cache:
-    rm -rf .ruff_cache .mypy_cache .pytest_cache
-    @echo "✓ Caches cleaned."
+{% if workspace_is_internal %}clean-workspace:
+    rm -rf _workspace/*
+    @mkdir -p _workspace/output/figures _workspace/output/tables
+    @echo "✓ Workspace cleaned (_workspace/). Run 'just pipeline-all' to rebuild."
+{% else %}clean-workspace:
+    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace ${WORKSPACE_ROOT} cleaned." || echo "✗ Workspace not found"
 {% endif %}

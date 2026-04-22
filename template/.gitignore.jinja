@@ -16,6 +16,10 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
+{% if workspace_is_internal %}# === Workspace (generated — gitignored, fully regenerable) ===
+_workspace/
+{% endif %}
+
 {% if include_latex %}# === LaTeX ===
 thesis/build/
 thesis/figures/

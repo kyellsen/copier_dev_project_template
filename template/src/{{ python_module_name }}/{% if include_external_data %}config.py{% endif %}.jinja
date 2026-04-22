@@ -2,16 +2,31 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Project Root (three files up: src / module / config.py -> root)
+# Project Root (three levels up: src / module / config.py → root)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Load variables from .env if present
+# Load variables from .env if present (Nextcloud data paths{% if not workspace_is_internal %}, WORKSPACE_ROOT{% endif %})
 load_dotenv(PROJECT_ROOT / ".env")
 
-# Workspace Directory (from .env)
-WORKSPACE_ROOT_STR = os.environ.get("WORKSPACE_ROOT")
-if not WORKSPACE_ROOT_STR:
-    raise ValueError("WORKSPACE_ROOT is not set in .env")
+{% if workspace_is_internal %}
+# Workspace: fixed relative path inside repo, gitignored.
+# No configuration needed — always at PROJECT_ROOT/_workspace/
+WORKSPACE = PROJECT_ROOT / "_workspace"
+{% else %}
+# Workspace: external directory configured via WORKSPACE_ROOT in .env
+_workspace_root = os.environ.get("WORKSPACE_ROOT")
+if not _workspace_root:
+    raise ValueError(
+        "WORKSPACE_ROOT is not set. "
+        "Please copy .env.example to .env and fill in the path."
+    )
+WORKSPACE = Path(_workspace_root)
+{% endif %}
 
-WORKSPACE = Path(WORKSPACE_ROOT_STR)
+# Ensure workspace exists
 WORKSPACE.mkdir(parents=True, exist_ok=True)
+
+# Output directories (figures, tables) — used by plot scripts and LaTeX
+OUTPUT_DIR = WORKSPACE / "output"
+FIGURES_DIR = OUTPUT_DIR / "figures"
+TABLES_DIR = OUTPUT_DIR / "tables"

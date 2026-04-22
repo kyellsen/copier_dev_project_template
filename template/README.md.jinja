@@ -25,5 +25,38 @@ just test
 - `src/{{ python_module_name }}/` - Main Python source code
 - `notebooks/` - Jupyter notebooks for exploration
 - `tests/` - Pytest suite
-{% if include_external_data %}- `.env` - Local environment variables (paths to external data & workspaces)
+{% if include_external_data %}- `.env` - Local environment variables (paths to external data)
+{% endif %}
+## 🗄️ Workspace (Generated Data)
+
+{% if workspace_is_internal %}
+Intermediate data (Parquet, DuckDB, plots) is stored in **`_workspace/`** inside this
+repository. This directory is gitignored — it is never committed and is fully regenerable.
+
+```
+_workspace/
+├── output/
+│   ├── figures/   ← Generated plots (PNG, PDF)
+│   └── tables/    ← Generated LaTeX tables
+└── ...           ← Parquet, DuckDB intermediate files
+```
+
+To wipe and rebuild:
+
+```bash
+just clean-workspace
+just pipeline-all  # or equivalent
+```
+{% else %}
+Intermediate data (Parquet, DuckDB, plots) is stored **outside the repo** at the path
+configured as `WORKSPACE_ROOT` in your `.env` file.
+
+```bash
+# Verify your environment is configured correctly
+just check-env
+
+# Wipe and rebuild the workspace
+just clean-workspace
+just pipeline-all  # or equivalent
+```
 {% endif %}

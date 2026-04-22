@@ -44,8 +44,21 @@ include_latex:
 
 include_external_data:
   type: bool
-  help: "Connect to external Nextcloud data and dev_workspaces? (uses .env)"
+  help: "Connect to external Nextcloud data directories? (adds .env for data paths)"
   default: true
+
+workspace_location:
+  type: str
+  help: "Where should generated intermediate data (Parquet, DuckDB, plots) be stored?"
+  choices:
+    "internal  — _workspace/ inside repo (gitignored, zero config)": "internal"
+    "external  — outside repo via WORKSPACE_ROOT in .env": "external"
+  default: "internal"
+
+workspace_is_internal:
+  type: bool
+  default: "{% if workspace_location == 'internal' %}true{% else %}false{% endif %}"
+  when: false
 
 include_vision_roadmap:
   type: bool
