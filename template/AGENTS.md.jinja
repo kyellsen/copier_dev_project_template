@@ -67,6 +67,21 @@ Follow **[docs/development/commit.md](docs/development/commit.md)** strictly:
 {% if include_latex %}| `publication/` | LaTeX document |
 {% endif %}{% if workspace_is_internal %}| `_workspace/` | Generated data (gitignored, fully regenerable) |
 {% endif %}
+## 7. Environment Variable Naming
+
+All project-specific environment variables **MUST** use the prefix `{{ python_module_name | upper }}_`.
+
+```
+# ✅ Correct
+{{ python_module_name | upper }}_DATA_ROOT=/mnt/data/...
+{{ python_module_name | upper }}_DEBUG=true
+
+# ❌ Wrong — missing prefix
+DATA_ROOT=/mnt/data/...
+DEBUG=true
+```
+
+**Exceptions:** Third-party standards keep their names (e.g., `POSTGRES_USER`, `DOCKER_HOST`).
 ## See Also
 
 - **[README.md](README.md)** — Project overview, quick start
