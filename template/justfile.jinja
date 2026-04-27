@@ -73,6 +73,12 @@ alias pub-watch := publication-watch
 publication-watch:
     cd publication && typst watch main.typ
 
+alias export := export-pdf
+export-pdf filename:
+    @test -f publication/main.pdf || (echo "❌ publication/main.pdf not found. Run 'just pub' first." && exit 1)
+    cp publication/main.pdf "{{filename}}.pdf"
+    @echo "✅ Exported to {{filename}}.pdf"
+
 # === Freeze ===
 prepare-assets:
     uv run python scripts/prepare_assets.py
