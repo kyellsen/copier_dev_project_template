@@ -1,1 +1,52 @@
-# Project Vision
+# {{ project_name }} — Vision
+
+**{{ description }}**
+
+---
+
+## Core Philosophy & Mission
+
+**TO-BE:** What is the ultimate goal of this project?
+> **The Prime Directive:** [e.g., "Data Integrity is paramount" or "Reproducibility above all else"]. 
+> Every design decision must subordinate to this principle.
+
+---
+
+## Architecture & Technology Vision
+
+### Tech Stack
+- **Language/Runtime:** Python {{ python_version }}
+- **Build/Orchestration:** `uv`, `hatchling`, `just`
+{% if include_latex %}- **Publication:** LaTeX (managed via `latexmk`){% endif %}
+{% if include_external_data %}- **Data Storage:** External data directory (Read-Only) + Local Workspace{% endif %}
+
+### Key Concepts
+- **Immutability of Raw Data:** Raw data is never modified.
+- **Medallion Architecture:** Data flows from Raw (Bronze) -> Processed (Silver) -> Output (Gold).
+
+---
+
+## Component Architecture
+
+| Component / Module | Role & Responsibility | Status |
+| --- | --- | --- |
+| `src.core` | Core domain models, interfaces, and base configurations | AS-IS |
+| `[Module Name]` | [Description] | Planned |
+
+---
+
+## Design Principles
+
+1. **Keep It Simple, Stupid (KISS)** — Avoid over-engineering. Write boring, robust code.
+2. **Reproducibility** — A fresh checkout must produce identical results.
+3. **Transparency** — Log generously, fail fast and loudly.
+4. **Modularity** — Separate data extraction from processing and analysis.
+
+---
+
+## See Also
+- **[README.md](README.md)** — Project overview
+- **[ROADMAP.md](ROADMAP.md)** — Milestone planning
+- **[AGENTS.md](AGENTS.md)** — Binding rules for AI coding assistants
+
+> **AI Agents:** This document is normative. When designing new modules or refactoring architecture, you **MUST** consult the Design Principles and Architecture above. Do not deviate without explicit human approval.
