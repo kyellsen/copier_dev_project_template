@@ -65,3 +65,54 @@ just clean-workspace
 just pipeline-all  # or equivalent
 ```
 {% endif %}
+
+{% if include_latex %}
+## 📝 LaTeX Publication Workflow
+
+Dieses Projekt enthält ein vollständig autarkes LaTeX-Setup (`publication/`), das strikt von den Rohdaten und der Analyse getrennt ist. Es nutzt das **"Freeze"-Konzept**, um sicherzustellen, dass das Git-Repository leichtgewichtig bleibt und die finale Arbeit auf jedem Rechner kompiliert.
+
+### Der "Königsweg" für Assets (Bilder, Plots, Tabellen)
+
+Rohdaten (wie 30MB-Fotos einer Nikon Z6) gehören **niemals** ins Git-Repository! 
+Der Workflow verläuft wie folgt:
+
+1. **Große Fotos skalieren:** 
+   Legst du neue hochauflösende Fotos in deine Nextcloud (Rohdaten), führst du einmalig aus:
+   ```bash
+   just prepare-assets
+   ```
+   Das Skript `scripts/prepare_assets.py` lädt die Bilder, verkleinert sie optimiert auf max. 1500px Breite und legt sie komprimiert (ohne Qualitätsverlust für den Druck) in den gitignorierten Ordner `_workspace/output/assets/` ab.
+
+2. **Plots & Tabellen generieren:**
+   Dein Python-Code (`src/`) speichert generierte Plots und Tabellen ebenfalls im Workspace (`_workspace/output/figures/`).
+
+3. **Einfrieren (Freeze):**
+   Damit das Git-Repo unabhängig kompiliert werden kann, müssen diese verkleinerten Assets ins Git.
+   ```bash
+   just freeze
+   ```
+   Kopiert alles aus `_workspace/output/{assets,figures,tables}` nach `publication/{assets,figures,tables}`. **Diese Verzeichnisse werden in Git committet!**
+
+### LaTeX kompilieren
+
+Das Projekt nutzt `latexmk` für sicheres Bauen. Alle temporären LaTeX-Dateien landen sauber in `publication/build/`.
+
+```bash
+# Baut die PDF (einmalig)
+just publication
+
+# Baut die PDF automatisch neu, sobald sich eine .tex-Datei ändert (Live-Vorschau)
+just publication-watch
+
+# Löscht den build/-Ordner
+just publication-clean
+```
+
+### Zotero Integration
+
+Literatur wird nicht manuell in einer `.bib`-Datei gepflegt.
+Richte in Zotero (via Plugin *Better BibTeX*) einen Auto-Export ein:
+- **Format:** BibLaTeX
+- **Ziel:** `publication/literature/references.bib`
+- **Option:** "Keep updated"
+{% endif %}
