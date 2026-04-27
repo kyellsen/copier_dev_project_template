@@ -54,6 +54,9 @@ publication-watch:
     cd publication && latexmk -pdf -pvc -outdir=build main.tex
 
 # === Freeze ===
+prepare-assets:
+    uv run python scripts/prepare_assets.py
+
 freeze:
     uv run python scripts/freeze.py
 {% endif %}

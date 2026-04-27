@@ -8,7 +8,8 @@ authors = [
 requires-python = ">={{ python_version }}"
 dependencies = [
     "python-dotenv>=1.0",
-    # Uncomment data science dependencies as needed:
+{% if include_latex %}    "Pillow>=10.0",  # Für das Downsampling hochauflösender Bilder
+{% endif %}    # Uncomment data science dependencies as needed:
     # "pandas>=2.2",
     # "polars>=1.5",
     # "numpy>=1.26",

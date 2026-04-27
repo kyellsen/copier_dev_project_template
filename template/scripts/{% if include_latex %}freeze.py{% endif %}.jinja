@@ -6,7 +6,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SOURCE = PROJECT_ROOT / "_workspace" / "output"
 PUB = PROJECT_ROOT / "publication"
 
-for subdir in ["figures", "tables"]:
+for subdir in ["figures", "tables", "assets"]:
     dest = PUB / subdir
     if dest.exists():
         shutil.rmtree(dest)
