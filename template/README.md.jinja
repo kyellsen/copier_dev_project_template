@@ -106,7 +106,7 @@ The workflow is as follows:
 
 ### Compile Typst
 
-The project uses `typst` for extremely fast and robust building. Unlike LaTeX, there is no auxiliary file clutter.
+The project uses `typst` for extremely fast and robust building. There is no auxiliary file clutter.
 
 ```bash
 # Build the PDF (once)
@@ -120,7 +120,7 @@ just publication-watch
 
 Literature is not maintained manually in a `.bib` file.
 Set up an auto-export in Zotero (via the *Better BibTeX* plugin):
-- **Format:** BibLaTeX (Note: Typst is stricter than LaTeX regarding malformed fields like `year`)
+- **Format:** BibLaTeX (Note: Typst is very strict regarding malformed fields like `year`)
 - **Target:** `publication/literature/references.bib`
 - **Option:** "Keep updated"
 {% endif %}
