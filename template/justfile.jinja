@@ -45,7 +45,8 @@ test: test-unit test-int
 test-all: test-unit test-int test-system
 
 # === CI Pipeline ===
-ci: check test-all
+ci:
+    @uv run python scripts/check.py --ci
 
 # === Interactive ===
 lab:
@@ -71,7 +72,7 @@ publication:
 
 alias pub-watch := publication-watch
 publication-watch:
-    cd publication && typst watch main.typ
+    cd publication && typst compile main.typ && (okular main.pdf > /dev/null 2>&1 &) && typst watch main.typ
 
 alias export := export-pdf
 export-pdf filename:

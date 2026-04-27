@@ -78,7 +78,9 @@ def _print_summary(
     skipped_count_total = 0
 
     # Find max elapsed for bar normalization (longest stage = full bar)
-    max_elapsed = max((e for _, p, e, _c, _s in stages if p is not None), default=1.0) or 1.0
+    max_elapsed = (
+        max((e for _, p, e, _c, _s in stages if p is not None), default=1.0) or 1.0
+    )
     max_label = max((len(label) for label, _, _, _, _ in stages), default=10)
     max_pad = max_label + 12
 
@@ -134,7 +136,9 @@ def _print_summary(
             f"\n  {Colors.OKGREEN}{Colors.BOLD}🎉 All {total_stages} stages passed!{Colors.ENDC}\n"
         )
     elif failed_count > 0:
-        print(f"\n  {Colors.FAIL}{Colors.BOLD}💥 {failed_count} stage(s) failed!{Colors.ENDC}\n")
+        print(
+            f"\n  {Colors.FAIL}{Colors.BOLD}💥 {failed_count} stage(s) failed!{Colors.ENDC}\n"
+        )
     elif warned_count > 0 and skipped_count_total == 0:
         print(
             f"\n  {Colors.OKGREEN}{Colors.BOLD}"
@@ -205,7 +209,10 @@ def run_pipeline(
         if (
             label in always_run_stages
             and always_run_failed
-            and (idx + 1 >= len(all_stages) or all_stages[idx + 1][0] not in always_run_stages)
+            and (
+                idx + 1 >= len(all_stages)
+                or all_stages[idx + 1][0] not in always_run_stages
+            )
         ):
             for skip_label, _ in all_stages[idx + 1 :]:
                 stages.append((skip_label, None, 0.0, True, 0))
