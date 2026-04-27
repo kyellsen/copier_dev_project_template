@@ -12,7 +12,7 @@ def main() -> None:
 
     # 1. Ruff lint (read-only)
     print("── Ruff lint ──")
-    result = subprocess.run(["uv", "run", "ruff", "check", str(SRC)], cwd=PROJECT_ROOT)
+    result = subprocess.run(["uv", "run", "ruff", "check", "."], cwd=PROJECT_ROOT)
     if result.returncode != 0:
         failed = True
 

@@ -21,7 +21,10 @@ just check-env
 # 4. Start Jupyter Lab or run tools
 {% else %}
 # 2. Start Jupyter Lab or run tools
-{% endif %}just lab
+{% endif %}
+# WICHTIG: Nutze immer `just lab`, damit die Notebooks im isolierten .venv laufen 
+# und Importe aus src/ reibungslos funktionieren!
+just lab
 just lint
 ```
 

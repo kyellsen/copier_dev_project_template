@@ -6,28 +6,49 @@ Datenverzeichnis, skaliert sie für den PDF-Druck auf eine vernünftige Größe
 Von dort werden sie mit `just freeze` nach `publication/assets/` kopiert.
 """
 import os
+import json
+import hashlib
 from pathlib import Path
 from PIL import Image
+from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ASSETS = PROJECT_ROOT / "_workspace" / "output" / "assets"
+HASH_FILE = WORKSPACE_ASSETS / ".asset_hashes.json"
 
-# TODO: Passe diesen Pfad an dein spezifisches Projekt an (z.B. via .env)
-# Beispiel:
-# RAW_IMAGES_DIR = Path(os.environ.get("{{ python_module_name | upper }}_DATA_ROOT", "/mnt/data/kyellsen/300_Projekte/...")) / "data" / "raw" / "photos"
-RAW_IMAGES_DIR = PROJECT_ROOT / "data" / "raw" / "photos"  # Platzhalter
+# Lade Umgebungsvariablen aus .env
+load_dotenv(PROJECT_ROOT / ".env")
+
+# Pfad aus der .env lesen (Fallback auf Dummy-Pfad für Fehlermeldung)
+env_var_name = "{{ python_module_name | upper }}_RAW_ASSETS_DIR"
+raw_dir_str = os.environ.get(env_var_name)
+RAW_IMAGES_DIR = Path(raw_dir_str) if raw_dir_str else None
 
 MAX_SIZE = (1500, 1500)
 QUALITY = 85
 
-def process_image(src_path: Path, dest_dir: Path):
-    """Skaliert ein Bild und speichert es komprimiert ab."""
+def get_file_hash(filepath: Path) -> str:
+    """Berechnet einen MD5-Hash der Datei."""
+    hasher = hashlib.md5()
+    with open(filepath, 'rb') as f:
+        buf = f.read(65536)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = f.read(65536)
+    return hasher.hexdigest()
+
+def process_image(src_path: Path, dest_dir: Path, hashes: dict) -> bool:
+    """Skaliert ein Bild, prüft auf Hashes und speichert es komprimiert ab.
+    Gibt True zurück, wenn verarbeitet wurde, False wenn gecached."""
     dest_path = dest_dir / f"{src_path.stem}.jpg"
     
-    # Überspringen, falls schon existiert (und neuer ist als Quelle)
-    if dest_path.exists() and dest_path.stat().st_mtime >= src_path.stat().st_mtime:
-        print(f"⏭  {dest_path.name} ist aktuell — übersprungen")
-        return
+    current_hash = get_file_hash(src_path)
+    file_key = src_path.name
+    
+    # Überspringen, falls Datei bereits existiert und Hash unverändert ist
+    if dest_path.exists() and hashes.get(file_key) == current_hash:
+        print(f"⏭  {dest_path.name} ist aktuell (Hash match) — übersprungen")
+        return False
 
     try:
         with Image.open(src_path) as img:
@@ -40,33 +61,58 @@ def process_image(src_path: Path, dest_dir: Path):
             
             img.save(dest_path, "JPEG", quality=QUALITY, optimize=True)
             
+            # Hash speichern
+            hashes[file_key] = current_hash
+            
             # Größe vergleichen für Ausgabe
             src_mb = src_path.stat().st_size / (1024 * 1024)
             dst_mb = dest_path.stat().st_size / (1024 * 1024)
             print(f"✓ {src_path.name}: {src_mb:.1f}MB -> {dst_mb:.2f}MB")
+            return True
             
     except Exception as e:
         print(f"✗ Fehler bei {src_path.name}: {e}")
+        return False
 
 def main():
-    if not RAW_IMAGES_DIR.exists():
-        print(f"ℹ️ Quellverzeichnis existiert nicht: {RAW_IMAGES_DIR}")
-        print("  Bitte Pfad in scripts/prepare_assets.py anpassen!")
+    if not RAW_IMAGES_DIR or not RAW_IMAGES_DIR.exists():
+        print(f"ℹ️ Quellverzeichnis für Assets existiert nicht oder ist nicht konfiguriert.")
+        print(f"  Bitte setze {env_var_name} in deiner .env Datei!")
+        if RAW_IMAGES_DIR:
+            print(f"  Aktueller Wert: {RAW_IMAGES_DIR}")
         return
 
     WORKSPACE_ASSETS.mkdir(parents=True, exist_ok=True)
     
+    # Hashes laden
+    hashes = {}
+    if HASH_FILE.exists():
+        try:
+            with open(HASH_FILE, "r") as f:
+                hashes = json.load(f)
+        except json.JSONDecodeError:
+            pass
+    
     image_files = list(RAW_IMAGES_DIR.glob("*.[jJ][pP][gG]")) + list(RAW_IMAGES_DIR.glob("*.[pP][nN][gG]"))
     
     if not image_files:
-        print(f"ℹ️ Keine Bilder gefunden in {RAW_IMAGES_DIR}")
+        print(f"ℹ️ Keine Bilder (.jpg, .png) gefunden in {RAW_IMAGES_DIR}")
         return
         
     print(f"Verarbeite {len(image_files)} Bilder...")
+    processed_count = 0
     for img_path in image_files:
-        process_image(img_path, WORKSPACE_ASSETS)
+        if process_image(img_path, WORKSPACE_ASSETS, hashes):
+            processed_count += 1
+            
+    # Hashes speichern
+    with open(HASH_FILE, "w") as f:
+        json.dump(hashes, f, indent=2)
         
-    print("\n✓ Assets vorbereitet. Run 'just freeze' um sie in publication/assets/ zu sichern.")
+    if processed_count > 0:
+        print(f"\n✓ {processed_count} Assets neu skaliert. Run 'just freeze' um sie in publication/assets/ zu sichern.")
+    else:
+        print("\n✓ Alle Assets sind bereits aktuell.")
 
 if __name__ == "__main__":
     main()

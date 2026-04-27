@@ -15,7 +15,7 @@ check-env:
 {% endif %}
 # === Code Quality ===
 lint:
-    @uv run ruff check src/
+    @uv run ruff check .
 
 alias c := check
 check:
@@ -47,11 +47,11 @@ lab:
 {% if include_latex %}
 # === LaTeX ===
 publication:
-    cd publication && latexmk -pdf -outdir=build -interaction=nonstopmode main.tex
+    cd publication && latexmk main.tex
 publication-clean:
-    cd publication && latexmk -C -outdir=build
+    cd publication && latexmk -C
 publication-watch:
-    cd publication && latexmk -pdf -pvc -outdir=build main.tex
+    cd publication && latexmk -pvc main.tex
 
 # === Freeze ===
 prepare-assets:

@@ -8,12 +8,11 @@ PUB = PROJECT_ROOT / "publication"
 
 for subdir in ["figures", "tables", "assets"]:
     dest = PUB / subdir
-    if dest.exists():
-        shutil.rmtree(dest)
     src = SOURCE / subdir
     if src.exists():
-        shutil.copytree(src, dest)
-        print(f"✓ {subdir}/ kopiert")
+        dest.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(src, dest, dirs_exist_ok=True)
+        print(f"✓ {subdir}/ kopiert/aktualisiert")
     else:
         dest.mkdir(parents=True, exist_ok=True)
         print(f"⚠ {subdir}/ ist leer — leeres Verzeichnis erstellt")
