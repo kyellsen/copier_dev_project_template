@@ -16,7 +16,7 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
-{% if workspace_is_internal %}# === Workspace (generated — gitignored, fully regenerable) ===
+{% if not workspace_location_external %}# === Workspace (generated — gitignored, fully regenerable) ===
 _workspace/
 {% endif %}
 

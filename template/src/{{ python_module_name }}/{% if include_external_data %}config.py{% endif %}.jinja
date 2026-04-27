@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 # Project Root (three levels up: src / module / config.py → root)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Load variables from .env if present (Nextcloud data paths{% if not workspace_is_internal %}, WORKSPACE_ROOT{% endif %})
+# Load variables from .env if present (Nextcloud data paths{% if workspace_location_external %}, WORKSPACE_ROOT{% endif %})
 load_dotenv(PROJECT_ROOT / ".env")
 
-{% if workspace_is_internal %}
+{% if not workspace_location_external %}
 # Workspace: fixed relative path inside repo, gitignored.
 # No configuration needed — always at PROJECT_ROOT/_workspace/
 WORKSPACE = PROJECT_ROOT / "_workspace"

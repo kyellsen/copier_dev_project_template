@@ -92,7 +92,7 @@ distclean: clean
 
 # ☢️  Stage 3: distclean + Workspace + Build artifacts (Factory Reset)
 nuke: distclean
-{% if workspace_is_internal %}    rm -rf _workspace/*
+{% if not workspace_location_external %}    rm -rf _workspace/*
     @mkdir -p _workspace/output/figures _workspace/output/tables{% if include_typst %} _workspace/output/assets{% endif %}
 {% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
     @test "${WORKSPACE_ROOT}" != "/" || (echo "Refusing to clean /"; exit 1)

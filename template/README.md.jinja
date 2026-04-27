@@ -45,7 +45,7 @@ just ci       # full local CI (runs all tests)
 ```
 ## 🗄️ Workspace (Generated Data)
 
-{% if workspace_is_internal %}
+{% if not workspace_location_external %}
 Intermediate data (Parquet, DuckDB, plots) is stored in **`_workspace/`** inside this
 repository. This directory is gitignored — it is never committed and is fully regenerable.
 
