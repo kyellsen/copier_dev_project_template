@@ -1,5 +1,38 @@
-# Empty pre-commit config
-# https://pre-commit.com
+---
+# ================================================================
+# Pre-Commit Configuration (Local Tooling Delegation)
+# This relies on the local environment (`uv`) and `just` commands.
+# This prevents version drift between CI and local hooks.
+# ================================================================
 repos:
   - repo: local
-    hooks: []
+    hooks:
+      # 1. FIX: Auto-Formatierung & Lint-Fix (Läuft vor dem Commit)
+      - id: fix-local
+        name: Fix (Format & Lint)
+        entry: just fix
+        language: system
+        pass_filenames: false  # `just fix` formatiert das ganze Projekt schnell genug
+        always_run: true
+        verbose: true
+        stages: [pre-commit]
+
+      # 2. CHECK: Lint & Typecheck (Läuft vor dem Commit)
+      - id: check-local
+        name: Check (Lint & Types)
+        entry: just check
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+        stages: [pre-commit]
+
+      # 3. VERIFY: Full CI Pipeline (Läuft vor dem Push)
+      - id: ci-local
+        name: CI (Check & All Tests)
+        entry: just ci
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+        stages: [pre-push]
