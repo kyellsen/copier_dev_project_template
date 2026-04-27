@@ -1,4 +1,4 @@
-"""Kopiert Pipeline-Output nach publication/ für Git-Commit."""
+"""Copies pipeline output to publication/ for git commit."""
 import shutil
 from pathlib import Path
 
@@ -12,9 +12,9 @@ for subdir in ["figures", "tables", "assets"]:
     if src.exists():
         dest.mkdir(parents=True, exist_ok=True)
         shutil.copytree(src, dest, dirs_exist_ok=True)
-        print(f"✓ {subdir}/ kopiert/aktualisiert")
+        print(f"✓ {subdir}/ copied/updated")
     else:
         dest.mkdir(parents=True, exist_ok=True)
-        print(f"⚠ {subdir}/ ist leer — leeres Verzeichnis erstellt")
+        print(f"⚠ {subdir}/ is empty — created empty directory")
 
-print("✓ Plots/Tabellen eingefroren. Jetzt committen.")
+print("✓ Plots/Tables frozen. Ready to commit.")

@@ -1,31 +1,44 @@
-"""Code quality check: Ruff lint + Mypy type check. Called by: just check"""
+"""Code quality check using the pipeline engine. Called by: just check"""
+
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
+
+from pipeline import run_pipeline
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC = PROJECT_ROOT / "src"
 
+ALWAYS_RUN_STAGES: set[str] = {"Ruff Lint", "Mypy"}
+
+
+def make_cmd_runner(cmd: list[str]) -> Callable[[], None]:
+    """Create a runner function for simple subprocess commands."""
+
+    def runner() -> None:
+        result = subprocess.run(cmd, cwd=PROJECT_ROOT)
+        if result.returncode != 0:
+            sys.exit(result.returncode)
+
+    return runner
+
 
 def main() -> None:
-    failed = False
+    all_stages: list[tuple[str, Callable[[], None | int]]] = [
+        ("Lock-File Check", make_cmd_runner(["uv", "lock", "--check"])),
+        ("Ruff Format Check", make_cmd_runner(["uv", "run", "ruff", "format", "--check", "."])),
+        ("Ruff Lint", make_cmd_runner(["uv", "run", "ruff", "check", "."])),
+        ("Mypy", make_cmd_runner(["uv", "run", "mypy", str(SRC)])),
+    ]
 
-    # 1. Ruff lint (read-only)
-    print("── Ruff lint ──")
-    result = subprocess.run(["uv", "run", "ruff", "check", "."], cwd=PROJECT_ROOT)
-    if result.returncode != 0:
-        failed = True
+    passed = run_pipeline(
+        all_stages=all_stages,
+        always_run_stages=ALWAYS_RUN_STAGES,
+    )
 
-    # 2. Mypy type check
-    print("── Mypy ──")
-    result = subprocess.run(["uv", "run", "mypy", str(SRC)], cwd=PROJECT_ROOT)
-    if result.returncode != 0:
-        failed = True
-
-    if failed:
-        print("\n✗ Quality check failed")
+    if not passed:
         sys.exit(1)
-    print("\n✓ All checks passed")
 
 
 if __name__ == "__main__":

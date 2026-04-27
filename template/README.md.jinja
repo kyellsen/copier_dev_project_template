@@ -22,8 +22,8 @@ just check-env
 {% else %}
 # 2. Start Jupyter Lab or run tools
 {% endif %}
-# WICHTIG: Nutze immer `just lab`, damit die Notebooks im isolierten .venv laufen 
-# und Importe aus src/ reibungslos funktionieren!
+# IMPORTANT: Always use `just lab` so that notebooks run in the isolated .venv
+# and imports from src/ work smoothly!
 just lab
 just lint
 ```
@@ -52,8 +52,8 @@ _workspace/
 To wipe and rebuild:
 
 ```bash
-just clean-workspace
-just pipeline-all  # or equivalent
+just nuke
+just setup
 ```
 {% else %}
 Intermediate data (Parquet, DuckDB, plots) is stored **outside the repo** at the path
@@ -64,58 +64,58 @@ configured as `WORKSPACE_ROOT` in your `.env` file.
 just check-env
 
 # Wipe and rebuild the workspace
-just clean-workspace
-just pipeline-all  # or equivalent
+just nuke
+just setup
 ```
 {% endif %}
 
 {% if include_latex %}
 ## 📝 LaTeX Publication Workflow
 
-Dieses Projekt enthält ein vollständig autarkes LaTeX-Setup (`publication/`), das strikt von den Rohdaten und der Analyse getrennt ist. Es nutzt das **"Freeze"-Konzept**, um sicherzustellen, dass das Git-Repository leichtgewichtig bleibt und die finale Arbeit auf jedem Rechner kompiliert.
+This project includes a completely self-contained LaTeX setup (`publication/`), strictly separated from raw data and analysis. It utilizes the **"Freeze" concept** to ensure the Git repository remains lightweight and the final thesis compiles on any machine.
 
-### Der "Königsweg" für Assets (Bilder, Plots, Tabellen)
+### The "Golden Path" for Assets (Images, Plots, Tables)
 
-Rohdaten (wie 30MB-Fotos einer Nikon Z6) gehören **niemals** ins Git-Repository! 
-Der Workflow verläuft wie folgt:
+Raw data (like 30MB photos from a Nikon Z6) **never** belongs in the Git repository! 
+The workflow is as follows:
 
-1. **Große Fotos skalieren:** 
-   Legst du neue hochauflösende Fotos in deine Nextcloud (Rohdaten), führst du einmalig aus:
+1. **Scale Large Photos:** 
+   When you place new high-resolution photos in your Nextcloud (raw data), run this once:
    ```bash
    just prepare-assets
    ```
-   Das Skript `scripts/prepare_assets.py` lädt die Bilder, verkleinert sie optimiert auf max. 1500px Breite und legt sie komprimiert (ohne Qualitätsverlust für den Druck) in den gitignorierten Ordner `_workspace/output/assets/` ab.
+   The script `scripts/prepare_assets.py` loads the images, downscales them optimally to a max width of 1500px, and saves them compressed (without loss of print quality) into the gitignored `_workspace/output/assets/` directory.
 
-2. **Plots & Tabellen generieren:**
-   Dein Python-Code (`src/`) speichert generierte Plots und Tabellen ebenfalls im Workspace (`_workspace/output/figures/`).
+2. **Generate Plots & Tables:**
+   Your Python code (`src/`) also saves generated plots and tables into the workspace (`_workspace/output/figures/`).
 
-3. **Einfrieren (Freeze):**
-   Damit das Git-Repo unabhängig kompiliert werden kann, müssen diese verkleinerten Assets ins Git.
+3. **Freeze:**
+   To allow the Git repo to compile independently, these smaller assets must be committed to Git.
    ```bash
    just freeze
    ```
-   Kopiert alles aus `_workspace/output/{assets,figures,tables}` nach `publication/{assets,figures,tables}`. **Diese Verzeichnisse werden in Git committet!**
+   This copies everything from `_workspace/output/{assets,figures,tables}` to `publication/{assets,figures,tables}`. **These directories are then committed to Git!**
 
-### LaTeX kompilieren
+### Compile LaTeX
 
-Das Projekt nutzt `latexmk` für sicheres Bauen. Alle temporären LaTeX-Dateien landen sauber in `publication/build/`.
+The project uses `latexmk` for robust building. All temporary LaTeX files are cleanly output to `publication/build/`.
 
 ```bash
-# Baut die PDF (einmalig)
+# Build the PDF (once)
 just publication
 
-# Baut die PDF automatisch neu, sobald sich eine .tex-Datei ändert (Live-Vorschau)
+# Automatically rebuild the PDF when a .tex file changes (live preview)
 just publication-watch
 
-# Löscht den build/-Ordner
+# Delete the build/ directory
 just publication-clean
 ```
 
 ### Zotero Integration
 
-Literatur wird nicht manuell in einer `.bib`-Datei gepflegt.
-Richte in Zotero (via Plugin *Better BibTeX*) einen Auto-Export ein:
+Literature is not maintained manually in a `.bib` file.
+Set up an auto-export in Zotero (via the *Better BibTeX* plugin):
 - **Format:** BibLaTeX
-- **Ziel:** `publication/literature/references.bib`
+- **Target:** `publication/literature/references.bib`
 - **Option:** "Keep updated"
 {% endif %}

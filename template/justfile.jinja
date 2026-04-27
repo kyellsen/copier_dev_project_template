@@ -22,17 +22,22 @@ check:
     @uv run python scripts/check.py
 
 fix:
-    @uv run python scripts/fix.py
+    @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
+    uv run ruff format .
+    uv run ruff check --fix .
 
 # === Testing ===
 test-unit:
-    @uv run python scripts/test.py unit
+    @echo "\033[1m\033[95m🚀 Running Unit Tests\033[0m"
+    uv run pytest -m unit -q -rs
 
 test-int:
-    @uv run python scripts/test.py integration
+    @echo "\033[1m\033[95m🚀 Running Integration Tests\033[0m"
+    uv run pytest -m integration -q -rs
 
 test-system:
-    @uv run python scripts/test.py system
+    @echo "\033[1m\033[95m🚀 Running System Tests\033[0m"
+    uv run pytest -m system -q -rs
 
 test: test-unit test-int
 
@@ -60,20 +65,24 @@ prepare-assets:
 freeze:
     uv run python scripts/freeze.py
 {% endif %}
-# === Cleanup (3 Stufen) ===
-# 🧹 Stufe 1: Caches löschen (gefahrlos, täglich)
+# === Cleanup (3 Stages) ===
+# 🧹 Stage 1: Clear caches (safe, daily)
 clean:
     @uv run python scripts/clean.py
 
-# 🧼 Stufe 2: clean + .venv löschen (Neuinstallation nötig: just setup)
+# 🧼 Stage 2: clean + remove .venv (reinstall required: just setup)
 distclean: clean
     rm -rf .venv
-    @echo "✓ .venv gelöscht. Run 'just setup' to reinstall."
+    @echo "✓ .venv removed. Run 'just setup' to reinstall."
 
-# ☢️  Stufe 3: distclean + Workspace + Build-Artefakte (Factory Reset)
+# ☢️  Stage 3: distclean + Workspace + Build artifacts (Factory Reset)
 nuke: distclean
 {% if workspace_is_internal %}    rm -rf _workspace/*
     @mkdir -p _workspace/output/figures _workspace/output/tables
-{% else %}    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace cleaned." || echo "⚠ Workspace not found"
+{% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
+    @test "${WORKSPACE_ROOT}" != "/" || (echo "Refusing to clean /"; exit 1)
+    @test -d "${WORKSPACE_ROOT}" || (echo "Workspace not found"; exit 1)
+    rm -rf "${WORKSPACE_ROOT:?}"/*
+    @echo "✓ Workspace cleaned."
 {% endif %}{% if include_latex %}    rm -rf publication/build/
 {% endif %}    @echo "✓ Factory Reset. Run 'just setup' to start fresh."

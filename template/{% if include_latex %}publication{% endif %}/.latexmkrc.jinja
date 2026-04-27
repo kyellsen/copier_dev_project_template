@@ -1,28 +1,3 @@
-# ===========================
-# latexmkrc — all artifacts -> build/
-# ===========================
-
-# Output in build/
-$aux_dir = 'build';
 $out_dir = 'build';
-
-# Engine: pdfLaTeX
-$pdf_mode = 1;  # 1 = pdflatex
-$pdflatex = 'pdflatex -interaction=nonstopmode -synctex=1 -file-line-error -output-directory=build %O %S';
-
-# Biber in build/ leiten
-$bibtex_use = 2;  # 0=bibtex, 1=auto, 2=biber
-$biber = 'biber %O --input-directory build --output-directory build %B';
-
-# Glossaries (makeglossaries nutzt makeindex/xindy)
-$makeindex = 'makeindex %O -o %D %S';
-$makeglossaries = 'makeglossaries -d build %B';
-
-# Aufräumen: typische Nebenprodukte
-$clean_ext = join(' ',
-  qw(aux bbl blg fdb_latexmk fls log out toc synctex.gz lof lot nav snm vrb
-     bcf run.xml ilg ind idx ist acr acn alg glg glo gls glsdefs xdy)
-);
-
-# Build-Ordner sicherstellen (POSIX)
-system('mkdir -p build');
+$pdf_mode = 1;
+$interaction = 'nonstopmode';

@@ -62,8 +62,8 @@ workspace_is_internal:
 
 include_vision_roadmap:
   type: bool
-  help: "Include empty ROADMAP.md and VISION.md files?"
-  default: false
+  help: "Include structured VISION.md and ROADMAP.md files for project planning and AI-agent guidance?"
+  default: true
 
 include_license:
   type: bool
@@ -72,10 +72,10 @@ include_license:
 
 include_precommit:
   type: bool
-  help: "Include empty .pre-commit-config.yaml?"
+  help: "Include local pre-commit hooks delegating to just/uv?"
   default: false
 
 include_github_actions:
   type: bool
-  help: "Include empty GitHub Action workflows (.github/workflows)?"
+  help: "Include GitHub Actions CI workflow?"
   default: false
