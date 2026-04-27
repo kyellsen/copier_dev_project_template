@@ -35,6 +35,14 @@ just lint
 - `tests/` - Pytest suite
 {% if include_external_data %}- `.env` - Local environment variables (paths to external data)
 {% endif %}
+## 🧪 Quality checks
+
+```bash
+just fix      # format and autofix lint issues
+just check    # lockfile, formatting, linting, typing
+just test     # unit + integration tests
+just ci       # full local CI (runs all tests)
+```
 ## 🗄️ Workspace (Generated Data)
 
 {% if workspace_is_internal %}

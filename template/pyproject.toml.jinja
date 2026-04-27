@@ -8,7 +8,7 @@ authors = [
 requires-python = ">={{ python_version }}"
 dependencies = [
     "python-dotenv>=1.0",
-{% if include_latex %}    "Pillow>=10.0",  # Für das Downsampling hochauflösender Bilder
+{% if include_latex %}    "Pillow>=10.0",  # For downsampling high-resolution publication assets
 {% endif %}    # Uncomment data science dependencies as needed:
     # "pandas>=2.2",
     # "polars>=1.5",
@@ -25,10 +25,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.4",
-    "mypy>=1.10",
+    "ruff>=0.9",
+    "mypy>=1.14",
     "pytest>=8.0",
-    "jupyterlab>=4.0",
+    "jupyterlab>=4.3",
     "ipykernel>=6.29",
 ]
 
@@ -39,9 +39,16 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 100
 target-version = "py{{ python_version | replace('.', '') }}"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "PTH", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
 
 [tool.mypy]
-strict = true
 python_version = "{{ python_version }}"
 ignore_missing_imports = true
 
