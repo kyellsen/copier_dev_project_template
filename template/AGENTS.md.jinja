@@ -1,0 +1,73 @@
+# AGENTS.md
+
+> **AUTHORITY:** This document is the **single source of truth** for all AI agents
+> working on this repository. Supplementary files (`.gemini/`, `.cursorrules`, `CLAUDE.md`)
+> redirect here — never the reverse.
+
+👤 **Human?** Read **[README.md](README.md)** for overview and quick start.
+
+## 1. Language & Communication Policy
+- **Repository Content (Code, Commits, Docs):** English
+- **Chat Output (Interaction with User):** German
+
+## 2. Tech Stack
+
+| Domain | Use |
+|---|---|
+| Runtime | Python {{ python_version }}, `uv` (package manager) |
+| Build | `hatchling` (PEP 517) |
+| Task Runner | `just` (see `justfile`) |
+| Linting | `ruff` (lint + format) |
+| Type Checking | `mypy` (strict mode) |
+| Testing | `pytest` with markers (`unit`, `integration`, `system`) |
+| Config | `python-dotenv` (`.env` files) |
+
+## 3. Quality Gates
+
+Run `just check` (alias: `just c`) **before every commit**. It runs:
+1. `ruff check` — lint errors
+2. `mypy` — type safety
+
+Run `just fix` to auto-format and fix lint issues.
+
+## 4. Testing Rules
+
+1. Every test function **MUST** have exactly one marker: `@pytest.mark.unit`, `.integration`, or `.system`.
+2. Tests live in `tests/unit/`, `tests/integration/`, `tests/system/` — matching their marker.
+3. **Unit:** No I/O, no filesystem, no network. Fast (< 1s/test).
+4. **Integration:** Real filesystem or external data. Self-contained.
+5. **System:** Full pipeline end-to-end.
+
+| Command | Scope |
+|---|---|
+| `just test` | Unit + Integration (daily driver) |
+| `just test-all` | All three tiers |
+| `just test-unit` | Unit only |
+| `just test-int` | Integration only |
+| `just test-system` | System only |
+
+## 5. Commit Rules
+
+Follow **[docs/development/commit.md](docs/development/commit.md)** strictly:
+- Conventional Commits format: `<type>(<scope>): <subject>`
+- Types: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`
+- Subject: lowercase, imperative mood, ≤ 72 chars, no period
+- Prefer small, focused commits over large monolithic ones
+
+## 6. Project Structure
+
+| Path | Purpose |
+|---|---|
+| `src/{{ python_module_name }}/` | Main Python package |
+| `tests/` | Test suite (unit / integration / system) |
+| `scripts/` | Build & lifecycle scripts (Python) |
+| `docs/development/` | Developer guidelines (commit rules) |
+| `justfile` | All developer commands |
+| `.env` | Local environment variables (gitignored) |
+{% if include_latex %}| `publication/` | LaTeX document |
+{% endif %}{% if workspace_is_internal %}| `_workspace/` | Generated data (gitignored, fully regenerable) |
+{% endif %}
+## See Also
+
+- **[README.md](README.md)** — Project overview, quick start
+- **[docs/development/commit.md](docs/development/commit.md)** — Commit message standard
