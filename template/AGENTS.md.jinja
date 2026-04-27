@@ -24,11 +24,12 @@
 
 ## 3. Quality Gates
 
-Run `just check` (alias: `just c`) **before every commit**. It runs:
-1. `ruff check` — lint errors
-2. `mypy` — type safety
-
-Run `just fix` to auto-format and fix lint issues.
+| Command | Purpose | When |
+|---|---|---|
+| `just lint` | Ruff lint only (fastest feedback) | While coding |
+| `just check` (`c`) | Ruff lint + Mypy type check | Before every commit |
+| `just fix` | Auto-format + lint fix | After `check` finds issues |
+| `just ci` | check + all tests (full pipeline) | Before push / release |
 
 ## 4. Testing Rules
 
@@ -45,6 +46,9 @@ Run `just fix` to auto-format and fix lint issues.
 | `just test-unit` | Unit only |
 | `just test-int` | Integration only |
 | `just test-system` | System only |
+| `just clean` | Remove caches (`__pycache__`, `.pytest_cache`) |
+| `just distclean` | clean + delete `.venv` |
+| `just nuke` | distclean + workspace + build (Factory Reset) |
 
 ## 5. Commit Rules
 

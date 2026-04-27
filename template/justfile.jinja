@@ -14,6 +14,9 @@ check-env:
     uv run python scripts/check_env.py
 {% endif %}
 # === Code Quality ===
+lint:
+    @uv run ruff check src/
+
 alias c := check
 check:
     @uv run python scripts/check.py
@@ -35,6 +38,9 @@ test: test-unit test-int
 
 test-all: test-unit test-int test-system
 
+# === CI Pipeline ===
+ci: check test-all
+
 # === Interactive ===
 lab:
     uv run jupyter lab
@@ -51,15 +57,20 @@ publication-watch:
 freeze:
     uv run python scripts/freeze.py
 {% endif %}
-# === Cleanup ===
-clear:
-    @uv run python scripts/clear.py
-{% if workspace_is_internal %}
-clean-workspace:
-    rm -rf _workspace/*
+# === Cleanup (3 Stufen) ===
+# 🧹 Stufe 1: Caches löschen (gefahrlos, täglich)
+clean:
+    @uv run python scripts/clean.py
+
+# 🧼 Stufe 2: clean + .venv löschen (Neuinstallation nötig: just setup)
+distclean: clean
+    rm -rf .venv
+    @echo "✓ .venv gelöscht. Run 'just setup' to reinstall."
+
+# ☢️  Stufe 3: distclean + Workspace + Build-Artefakte (Factory Reset)
+nuke: distclean
+{% if workspace_is_internal %}    rm -rf _workspace/*
     @mkdir -p _workspace/output/figures _workspace/output/tables
-    @echo "✓ Workspace cleaned. Run 'just pipeline-all' to rebuild."
-{% else %}
-clean-workspace:
-    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace cleaned." || echo "✗ Workspace not found"
-{% endif %}
+{% else %}    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace cleaned." || echo "⚠ Workspace not found"
+{% endif %}{% if include_latex %}    rm -rf publication/build/
+{% endif %}    @echo "✓ Factory Reset. Run 'just setup' to start fresh."
