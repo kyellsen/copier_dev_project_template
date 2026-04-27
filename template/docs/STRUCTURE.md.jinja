@@ -1,0 +1,53 @@
+# Documentation Structure & DRY Rules
+
+> **Status:** Normative (Mandatory) · **Scope:** All Contributors & AI Agents
+
+This document dictates the architectural boundaries of all documentation files in this repository.
+To prevent documentation drift and maintain the DRY (Don't Repeat Yourself) principle,
+you **MUST** adhere to these boundaries.
+
+## 1. Central Documents (Root Level)
+
+| File | Audience | Purpose | Boundary |
+|---|---|---|---|
+| `README.md` | 👤 Humans | Project overview, quickstart, structure | **Never** contains AI rules or internal conventions |
+| `AGENTS.md` | 🤖 AI Agents | Single source of truth for AI constraints | **Never** duplicates README content |
+{% if include_vision_roadmap %}| `ROADMAP.md` | 👤 + 🤖 | The **When** — milestones, versioning, timing | Does **not** describe architecture |
+| `VISION.md` | 👤 + 🤖 | The **Why** — architecture ideals, endgame goals | Does **not** track release versions |
+{% endif %}
+## 2. Developer Guidelines (`docs/development/`)
+
+| File | Purpose |
+|---|---|
+| `commit.md` | Conventional Commits standard — **binding** for all contributors and agents |
+
+**Rule:** Development docs describe *process* (how to commit, how to test, how to release).
+They must **never** paraphrase source code or duplicate information available in `pyproject.toml` or `justfile`.
+
+## 3. Source Code (`src/`)
+
+The code is the **Single Source of Truth** for implementation details.
+Documentation must **never** paraphrase what the code already expresses (e.g., function signatures,
+config keys, data schemas). Instead, link to the code or refer to the module by name.
+
+## 4. Scripts (`scripts/`)
+
+Lifecycle and build scripts called by `justfile` targets.
+Each script must have a docstring explaining its purpose and which `just` command calls it.
+
+## 5. AI & Automation Tooling
+
+| Path | Purpose |
+|---|---|
+| `.agent/workflows/*.md` | Workflow definitions for autonomous AI agents |
+| `AGENTS.md` | Entry point — agents read this first |
+
+**Rule:** Workflow files must **never** write persistent files to the repository.
+Audit reports and plans stay in temporary artifacts or chat output.
+
+## 6. General DRY Rules
+
+1. **No content duplication** — link instead of copying.
+2. **Code is SoT** — documentation describes *why* and *how to use*, never paraphrases *what the code does*.
+3. **Scrap notes** — temporary ideas or obsolete notes go to gitignored directories (`.tmp/`, `_workspace/`). Do not bloat the repository with dead notes.
+4. **One owner per topic** — every piece of information has exactly one canonical location. If two files describe the same thing, one must become a link-stub.
