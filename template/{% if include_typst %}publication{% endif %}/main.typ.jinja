@@ -1,0 +1,112 @@
+// main.typ — {{ project_name }}
+// Engine: typst compile | Build: typst compile main.typ
+
+#import "config.typ": *
+
+// === Dokument-Metadaten (PDF) ===
+#set document(
+  title: my-title,
+  author: my-author,
+)
+
+// === Seitenlayout (analog KOMA-Script scrreprt) ===
+#set page(
+  paper: "a4",
+  margin: (left: 3cm, right: 2.5cm, top: 2.5cm, bottom: 2.5cm),
+  numbering: "1",
+  number-align: center + bottom,
+)
+
+// === Schrift & Typografie ===
+#set text(
+  font: "Linux Libertine",
+  size: 12pt,
+  lang: "de",
+  region: "DE",
+)
+
+// 1.5-facher Zeilenabstand
+#set par(leading: 0.9em, first-line-indent: 0pt, spacing: 0.8em)
+
+// === Überschriften ===
+#set heading(numbering: "1.1.1.1.1")
+
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  v(0pt)
+  text(size: 18pt, weight: "bold")[#it]
+  v(18pt)
+}
+
+#show heading.where(level: 2): it => {
+  v(12pt)
+  text(size: 14pt, weight: "bold")[#it]
+  v(6pt)
+}
+
+#show heading.where(level: 3): it => {
+  v(12pt)
+  text(size: 12pt, weight: "bold")[#it]
+  v(6pt)
+}
+
+// === Abbildungen & Tabellen ===
+#set figure(gap: 0.8em)
+
+#show figure.caption: it => {
+  set text(size: 10pt)
+  it
+}
+
+#set figure.caption(separator: ": ")
+
+// Abb./Tab. statt Figure/Table
+#show figure.where(kind: image): set figure.caption(position: bottom)
+#show figure.where(kind: table): set figure.caption(position: top)
+
+// === Quellcode ===
+#show raw.where(block: true): it => {
+  set text(size: 9pt)
+  block(
+    fill: luma(245),
+    inset: 8pt,
+    radius: 2pt,
+    stroke: 0.5pt + luma(200),
+    width: 100%,
+    it,
+  )
+}
+
+// === Hyperlinks ===
+#show link: it => {
+  set text(fill: blue)
+  it
+}
+
+// ======================================================================
+// DOKUMENT
+// ======================================================================
+
+// --- Deckblatt ---
+#include "cover/cover.typ"
+
+// --- Verzeichnisse ---
+#set page(numbering: "1")
+#counter(page).update(1)
+
+#outline(title: "Inhaltsverzeichnis", depth: 3, indent: auto)
+#pagebreak()
+
+#outline(title: "Abbildungsverzeichnis", target: figure.where(kind: image))
+#pagebreak()
+
+#outline(title: "Tabellenverzeichnis", target: figure.where(kind: table))
+#pagebreak()
+
+// === Hauptteil ===
+#heading(level: 1)[Einleitung]
+Dies ist eine Typst-Vorlage für #my-title.
+
+// === Literaturverzeichnis ===
+#heading(numbering: none)[Literaturverzeichnis]
+#bibliography("literature/references.bib", title: none, style: "apa")

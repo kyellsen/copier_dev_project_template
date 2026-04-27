@@ -60,6 +60,6 @@ feat(pipeline): add timestamp-based cache decorator
 ```text
 refactor!: rename thesis/ to publication/
 
-All LaTeX files moved from thesis/ to publication/.
+All Typst files moved from thesis/ to publication/.
 Update any scripts referencing the old path.
 ```

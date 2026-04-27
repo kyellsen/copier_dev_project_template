@@ -53,7 +53,7 @@ repository. This directory is gitignored — it is never committed and is fully 
 _workspace/
 ├── output/
 │   ├── figures/   ← Generated plots (PNG, PDF)
-│   └── tables/    ← Generated LaTeX tables
+│   └── tables/    ← Generated Typst tables
 └── ...           ← Parquet, DuckDB intermediate files
 ```
 
@@ -77,10 +77,10 @@ just setup
 ```
 {% endif %}
 
-{% if include_latex %}
-## 📝 LaTeX Publication Workflow
+{% if include_typst %}
+## 📝 Typst Publication Workflow
 
-This project includes a completely self-contained LaTeX setup (`publication/`), strictly separated from raw data and analysis. It utilizes the **"Freeze" concept** to ensure the Git repository remains lightweight and the final thesis compiles on any machine.
+This project includes a completely self-contained Typst setup (`publication/`), strictly separated from raw data and analysis. It utilizes the **"Freeze" concept** to ensure the Git repository remains lightweight and the final thesis compiles on any machine in milliseconds.
 
 ### The "Golden Path" for Assets (Images, Plots, Tables)
 
@@ -104,26 +104,23 @@ The workflow is as follows:
    ```
    This copies everything from `_workspace/output/{assets,figures,tables}` to `publication/{assets,figures,tables}`. **These directories are then committed to Git!**
 
-### Compile LaTeX
+### Compile Typst
 
-The project uses `latexmk` for robust building. All temporary LaTeX files are cleanly output to `publication/build/`.
+The project uses `typst` for extremely fast and robust building. Unlike LaTeX, there is no auxiliary file clutter.
 
 ```bash
 # Build the PDF (once)
 just publication
 
-# Automatically rebuild the PDF when a .tex file changes (live preview)
+# Automatically rebuild the PDF when a .typ file changes (live preview)
 just publication-watch
-
-# Delete the build/ directory
-just publication-clean
 ```
 
 ### Zotero Integration
 
 Literature is not maintained manually in a `.bib` file.
 Set up an auto-export in Zotero (via the *Better BibTeX* plugin):
-- **Format:** BibLaTeX
+- **Format:** BibLaTeX (Note: Typst is stricter than LaTeX regarding malformed fields like `year`)
 - **Target:** `publication/literature/references.bib`
 - **Option:** "Keep updated"
 {% endif %}

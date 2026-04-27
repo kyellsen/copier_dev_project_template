@@ -40,6 +40,18 @@
     "editor.formatOnSave": true
   },
 
+{% if include_typst %}
+  // --------------------------------------------------------
+  // 📝 TYPST & SCHREIBEN
+  // --------------------------------------------------------
+  "[typst]": {
+    "editor.wordWrap": "on",
+    "editor.formatOnSave": true
+  },
+  "tinymist.formatterMode": "typstyle",
+  "tinymist.exportPdf": "onSave",
+
+{% endif %}
   // --------------------------------------------------------
   // 🧹 GENERAL CLEANUP
   // --------------------------------------------------------

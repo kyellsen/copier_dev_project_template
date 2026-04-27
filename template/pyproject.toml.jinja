@@ -8,7 +8,7 @@ authors = [
 requires-python = ">={{ python_version }}"
 dependencies = [
     "python-dotenv>=1.0",
-{% if include_latex %}    "Pillow>=10.0",  # For downsampling high-resolution publication assets
+{% if include_typst %}    "Pillow>=10.0",  # For downsampling high-resolution publication assets
 {% endif %}    # Uncomment data science dependencies as needed:
     # "pandas>=2.2",
     # "polars>=1.5",

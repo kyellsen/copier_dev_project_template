@@ -37,9 +37,9 @@ author_email:
 
 # --- Optional Modules ---
 
-include_latex:
+include_typst:
   type: bool
-  help: "Include LaTeX / publication setup directory?"
+  help: "Include Typst publication setup directory?"
   default: false
 
 include_external_data:

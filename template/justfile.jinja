@@ -39,6 +39,7 @@ test-system:
     @echo "\033[1m\033[95m🚀 Running System Tests\033[0m"
     uv run pytest tests/system -m system -q -rs || test $? -eq 5
 
+alias t := test
 test: test-unit test-int
 
 test-all: test-unit test-int test-system
@@ -49,14 +50,28 @@ ci: check test-all
 # === Interactive ===
 lab:
     uv run jupyter lab
-{% if include_latex %}
-# === LaTeX ===
+
+# === Data Pipeline ===
+alias ana := analyze
+analyze:
+    @echo "\033[1m\033[93m⚠️ 'analyze' target not implemented yet. Add it to your justfile.\033[0m"
+
+alias plt := plot
+plot:
+    @echo "\033[1m\033[93m⚠️ 'plot' target not implemented yet. Add it to your justfile.\033[0m"
+
+alias pip := pipeline
+pipeline:
+    @echo "\033[1m\033[93m⚠️ 'pipeline' target not implemented yet. Combine your steps here.\033[0m"
+{% if include_typst %}
+# === Typst ===
+alias pub := publication
 publication:
-    cd publication && latexmk main.tex
-publication-clean:
-    cd publication && latexmk -C
+    cd publication && typst compile main.typ
+
+alias pub-watch := publication-watch
 publication-watch:
-    cd publication && latexmk -pvc main.tex
+    cd publication && typst watch main.typ
 
 # === Freeze ===
 prepare-assets:
@@ -78,7 +93,7 @@ distclean: clean
 # ☢️  Stage 3: distclean + Workspace + Build artifacts (Factory Reset)
 nuke: distclean
 {% if workspace_is_internal %}    rm -rf _workspace/*
-    @mkdir -p _workspace/output/figures _workspace/output/tables{% if include_latex %} _workspace/output/assets{% endif %}
+    @mkdir -p _workspace/output/figures _workspace/output/tables{% if include_typst %} _workspace/output/assets{% endif %}
 {% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
     @test "${WORKSPACE_ROOT}" != "/" || (echo "Refusing to clean /"; exit 1)
     @test "${WORKSPACE_ROOT}" != "$HOME" || (echo "Refusing to clean HOME"; exit 1)
@@ -86,5 +101,4 @@ nuke: distclean
     @test -d "${WORKSPACE_ROOT}" || (echo "Workspace not found"; exit 1)
     rm -rf "${WORKSPACE_ROOT:?}"/*
     @echo "✓ Workspace cleaned."
-{% endif %}{% if include_latex %}    rm -rf publication/build/
 {% endif %}    @echo "✓ Factory Reset. Run 'just setup' to start fresh."

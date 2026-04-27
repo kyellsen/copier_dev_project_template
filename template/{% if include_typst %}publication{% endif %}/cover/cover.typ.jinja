@@ -1,0 +1,27 @@
+// cover.typ — Deckblatt
+#import "../config.typ": *
+
+#page(numbering: none, margin: (top: 3cm, bottom: 2cm, left: 3cm, right: 2.5cm))[
+  #set align(center)
+  #v(0.5cm)
+
+  #text(size: 14pt)[Projektbericht]
+
+  #v(1.2cm)
+
+  #text(size: 20pt, weight: "bold")[#my-title]
+
+  #v(1.2cm)
+
+  #image(my-cover-picture, width: 40%)
+
+  #v(1.2cm)
+
+  #text(size: 14pt)[erstellt von #my-author\ am #my-date]
+
+  #v(0.8cm)
+
+  #text[#my-author\ #link("mailto:" + my-author-email)[#my-author-email]]
+
+  #v(1fr)
+]
