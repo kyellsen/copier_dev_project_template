@@ -22,15 +22,37 @@ _workspace/
 
 {% if include_latex %}# === LaTeX ===
 publication/build/
+
+# LaTeX aux files (falls außerhalb build/ landen)
 *.aux
-*.log
-*.out
-*.toc
 *.bbl
-*.blg
 *.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.log
+*.lol
+*.out
 *.run.xml
 *.synctex.gz
+*.synctex(busy)
+*.toc
+*.nav
+*.snm
+*.xdv
+*.glg
+*.glo
+*.gls
+*.ist
+*.acn
+*.acr
+*.alg
+*.nlo
+*.nls
+_minted*
+*.mw
 {% endif %}
 
 # === OS & IDE ===
