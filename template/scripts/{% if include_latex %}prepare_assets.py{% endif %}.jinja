@@ -79,7 +79,7 @@ def process_image(src_path: Path, dest_dir: Path, hashes: dict[str, str]) -> boo
 
 def main() -> None:
     if not RAW_IMAGES_DIR or not RAW_IMAGES_DIR.exists():
-        print(f"ℹ️ Source directory for assets does not exist or is not configured.")
+        print(f"Info: Source directory for assets does not exist or is not configured.")
         print(f"  Please set {env_var_name} in your .env file!")
         if RAW_IMAGES_DIR:
             print(f"  Current value: {RAW_IMAGES_DIR}")
@@ -91,7 +91,7 @@ def main() -> None:
     hashes: dict[str, str] = {}
     if HASH_FILE.exists():
         try:
-            with open(HASH_FILE, "r") as f:
+            with HASH_FILE.open("r") as f:
                 hashes = json.load(f)
         except json.JSONDecodeError:
             pass
@@ -102,7 +102,7 @@ def main() -> None:
         image_files.extend(RAW_IMAGES_DIR.glob(ext))
     
     if not image_files:
-        print(f"ℹ️ No images (jpg, png, webp, tiff) found in {RAW_IMAGES_DIR}")
+        print(f"Info: No images (jpg, png, webp, tiff) found in {RAW_IMAGES_DIR}")
         return
         
     print(f"Processing {len(image_files)} images...")
@@ -112,7 +112,7 @@ def main() -> None:
             processed_count += 1
             
     # Save hashes
-    with open(HASH_FILE, "w") as f:
+    with HASH_FILE.open("w") as f:
         json.dump(hashes, f, indent=2)
         
     if processed_count > 0:
