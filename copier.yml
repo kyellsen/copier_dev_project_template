@@ -40,7 +40,7 @@ author_email:
 include_typst:
   type: bool
   help: "Include Typst publication setup directory?"
-  default: false
+  default: true
 
 include_external_data:
   type: bool
