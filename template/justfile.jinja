@@ -29,15 +29,15 @@ fix:
 # === Testing ===
 test-unit:
     @echo "\033[1m\033[95m🚀 Running Unit Tests\033[0m"
-    uv run pytest tests/unit -m unit -q -rs
+    uv run pytest tests/unit -m unit -q -rs || test $? -eq 5
 
 test-int:
     @echo "\033[1m\033[95m🚀 Running Integration Tests\033[0m"
-    uv run pytest tests/integration -m integration -q -rs
+    uv run pytest tests/integration -m integration -q -rs || test $? -eq 5
 
 test-system:
     @echo "\033[1m\033[95m🚀 Running System Tests\033[0m"
-    uv run pytest tests/system -m system -q -rs
+    uv run pytest tests/system -m system -q -rs || test $? -eq 5
 
 test: test-unit test-int
 
