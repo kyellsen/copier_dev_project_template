@@ -5,34 +5,31 @@ default:
     @just --list
 
 # === Setup ===
+alias s := setup
 setup:
     uv run python scripts/setup.py
 {% if include_external_data %}
 # === Environment Check ===
 check-env:
-    @test -f .env || (echo "✗ .env fehlt! Kopiere .env.example → .env" && exit 1)
-{% if not workspace_is_internal %}    @test -n "${WORKSPACE_ROOT}" || (echo "✗ WORKSPACE_ROOT fehlt in .env" && exit 1)
-    @echo "✓ WORKSPACE_ROOT = ${WORKSPACE_ROOT}"
-{% endif %}    @echo "✓ Umgebung ok"
+    uv run python scripts/check_env.py
 {% endif %}
-# === Quality Assurance ===
-lint:
-    uv run ruff check src/
-    uv run mypy src/
+# === Code Quality ===
+alias c := check
+check:
+    @uv run python scripts/check.py
 
-format:
-    uv run ruff format src/
-    uv run ruff check --fix src/
+fix:
+    @uv run python scripts/fix.py
 
 # === Testing ===
 test-unit:
-    uv run pytest tests/unit/ -m unit || test $? -eq 5
+    @uv run python scripts/test.py unit
 
 test-int:
-    uv run pytest tests/integration/ -m integration || test $? -eq 5
+    @uv run python scripts/test.py integration
 
 test-system:
-    uv run pytest tests/system/ -m system || test $? -eq 5
+    @uv run python scripts/test.py system
 
 test: test-unit test-int
 
@@ -41,8 +38,8 @@ test-all: test-unit test-int test-system
 # === Interactive ===
 lab:
     uv run jupyter lab
-
-{% if include_latex %}# === LaTeX ===
+{% if include_latex %}
+# === LaTeX ===
 publication:
     cd publication && latexmk -pdf -outdir=build -interaction=nonstopmode main.tex
 publication-clean:
@@ -53,12 +50,16 @@ publication-watch:
 # === Freeze ===
 freeze:
     uv run python scripts/freeze.py
-
-{% endif %}# === Workspace ===
-{% if workspace_is_internal %}clean-workspace:
+{% endif %}
+# === Cleanup ===
+clear:
+    @uv run python scripts/clear.py
+{% if workspace_is_internal %}
+clean-workspace:
     rm -rf _workspace/*
     @mkdir -p _workspace/output/figures _workspace/output/tables
-    @echo "✓ Workspace cleaned (_workspace/). Run 'just pipeline-all' to rebuild."
-{% else %}clean-workspace:
-    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace ${WORKSPACE_ROOT} cleaned." || echo "✗ Workspace not found"
+    @echo "✓ Workspace cleaned. Run 'just pipeline-all' to rebuild."
+{% else %}
+clean-workspace:
+    @test -d "${WORKSPACE_ROOT}" && rm -rf ${WORKSPACE_ROOT}/* && echo "✓ Workspace cleaned." || echo "✗ Workspace not found"
 {% endif %}
