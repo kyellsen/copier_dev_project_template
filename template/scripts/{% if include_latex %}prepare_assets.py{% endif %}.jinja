@@ -30,7 +30,7 @@ QUALITY = 85
 def get_file_hash(filepath: Path) -> str:
     """Calculates a BLAKE2b hash of the file."""
     hasher = hashlib.blake2b(digest_size=16)
-    with open(filepath, 'rb') as f:
+    with filepath.open("rb") as f:
         buf = f.read(65536)
         while len(buf) > 0:
             hasher.update(buf)
@@ -98,7 +98,7 @@ def main() -> None:
     
     # Find all standard image formats
     image_files = []
-    for ext in ("*.[jJ][pP][gG]", "*.[jJ][pP][eE][gG]", "*.[pP][nN][gG]", "*.[wW][eE][bB][pP]", "*.[tT][iI][fF]*"):
+    for ext in ("*.[jJ][pP][gG]", "*.[jJ][pP][eE][gG]", "*.[pP][nN][gG]", "*.[wW][eE][bB][pP]", "*.[tT][iI][fF]", "*.[tT][iI][fF][fF]"):
         image_files.extend(RAW_IMAGES_DIR.glob(ext))
     
     if not image_files:

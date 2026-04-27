@@ -67,7 +67,7 @@ include_vision_roadmap:
 
 include_license:
   type: bool
-  help: "Include empty LICENSE file?"
+  help: "Include LICENSE placeholder file?"
   default: false
 
 include_precommit:

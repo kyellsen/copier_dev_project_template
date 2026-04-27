@@ -29,15 +29,15 @@ fix:
 # === Testing ===
 test-unit:
     @echo "\033[1m\033[95m🚀 Running Unit Tests\033[0m"
-    uv run pytest -m unit -q -rs
+    uv run pytest tests/unit -m unit -q -rs
 
 test-int:
     @echo "\033[1m\033[95m🚀 Running Integration Tests\033[0m"
-    uv run pytest -m integration -q -rs
+    uv run pytest tests/integration -m integration -q -rs
 
 test-system:
     @echo "\033[1m\033[95m🚀 Running System Tests\033[0m"
-    uv run pytest -m system -q -rs
+    uv run pytest tests/system -m system -q -rs
 
 test: test-unit test-int
 
@@ -81,6 +81,8 @@ nuke: distclean
     @mkdir -p _workspace/output/figures _workspace/output/tables
 {% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
     @test "${WORKSPACE_ROOT}" != "/" || (echo "Refusing to clean /"; exit 1)
+    @test "${WORKSPACE_ROOT}" != "$HOME" || (echo "Refusing to clean HOME"; exit 1)
+    @test "${WORKSPACE_ROOT}" != "/mnt/data" || (echo "Refusing to clean /mnt/data"; exit 1)
     @test -d "${WORKSPACE_ROOT}" || (echo "Workspace not found"; exit 1)
     rm -rf "${WORKSPACE_ROOT:?}"/*
     @echo "✓ Workspace cleaned."
