@@ -1,16 +1,22 @@
-"""Resizes and copies large raw images for publication.
+"""Builds a compressed photo cache from the RAW_ASSETS_DIR.
 
-This step takes large images from the external data directory, 
-downscales them to a reasonable size for PDF printing (e.g. max 1500px width), 
-and saves them in the workspace.
-From there, they are copied to `publication/assets/` via `just freeze`.
+Reads JPG/JPEG/PNG/WEBP images and NEF (Nikon RAW) files from the configured 
+RAW_ASSETS_DIR, downscales them to publication quality, and writes the results 
+to _workspace/output/assets/, preserving the original subdirectory structure.
+
+NEF files are decoded with automatic white balance and exposure correction
+via `rawpy` (LibRaw) if installed. All outputs are JPEG, optimized for PDF embedding.
+
+Fast change detection (mtime + size) ensures idempotent runs — only new 
+or changed source files are reprocessed.
 """
-import os
+
 import json
-import hashlib
+import os
 from pathlib import Path
-from PIL import Image, ImageOps
+
 from dotenv import load_dotenv
+from PIL import Image, ImageOps
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ASSETS = PROJECT_ROOT / "_workspace" / "output" / "assets"
@@ -24,58 +30,107 @@ env_var_name = "{{ python_module_name | upper }}_RAW_ASSETS_DIR"
 raw_dir_str = os.environ.get(env_var_name)
 RAW_IMAGES_DIR = Path(raw_dir_str) if raw_dir_str else None
 
+# --- Configuration ---
 MAX_SIZE = (1500, 1500)
 QUALITY = 85
 
-def get_file_hash(filepath: Path) -> str:
-    """Calculates a BLAKE2b hash of the file."""
-    hasher = hashlib.blake2b(digest_size=16)
-    with filepath.open("rb") as f:
-        buf = f.read(65536)
-        while len(buf) > 0:
-            hasher.update(buf)
-            buf = f.read(65536)
-    return hasher.hexdigest()
+# Supported file suffixes (lowercase)
+SUFFIXES_IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"}
+SUFFIXES_RAW = {".nef"}
+SUFFIXES_ALL = SUFFIXES_IMAGE | SUFFIXES_RAW
 
-def process_image(src_path: Path, dest_dir: Path, hashes: dict[str, str]) -> bool:
-    """Scales an image, checks hashes, and saves it compressed.
-    Returns True if processed, False if cached or failed."""
-    dest_path = dest_dir / f"{src_path.stem}.jpg"
-    
-    current_hash = get_file_hash(src_path)
-    file_key = src_path.name
-    
-    # Skip if file already exists and hash is unchanged
-    if dest_path.exists() and hashes.get(file_key) == current_hash:
-        print(f"⏭  {dest_path.name} is up-to-date (hash match) — skipped")
+
+def get_file_meta(filepath: Path) -> dict[str, float | int]:
+    """Get mtime + size for fast change detection (no file read needed)."""
+    st = filepath.stat()
+    return {"mtime": st.st_mtime, "size": st.st_size}
+
+
+def is_raw_file(filepath: Path) -> bool:
+    """Check if a file is a RAW format that needs rawpy decoding."""
+    return filepath.suffix.lower() in SUFFIXES_RAW
+
+
+def process_raw(src_path: Path, dest_path: Path) -> bool:
+    """Decode a RAW file with auto white balance and exposure correction."""
+    try:
+        import rawpy
+    except ImportError:
+        print(f"  ✗ rawpy not installed — cannot process {src_path.name}")
         return False
 
     try:
+        with rawpy.imread(str(src_path)) as raw:
+            rgb = raw.postprocess(
+                use_camera_wb=True,
+                no_auto_bright=False,
+                output_bps=8,
+            )
+
+        img = Image.fromarray(rgb)
+        img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
+        img.save(dest_path, "JPEG", quality=QUALITY, optimize=True)
+        return True
+
+    except Exception as e:
+        print(f"  ✗ RAW error {src_path.name}: {e}")
+        return False
+
+
+def process_standard_image(src_path: Path, dest_path: Path) -> bool:
+    """Process a standard image (JPG/PNG): EXIF fix, downscale, compress."""
+    try:
         with Image.open(src_path) as img:
-            # Apply EXIF orientation (crucial for photos)
             img = ImageOps.exif_transpose(img)
-            
-            # Convert to RGB if necessary (e.g. for RGBA/PNGs)
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
-            
-            # thumbnail preserves aspect ratio
             img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
-            
             img.save(dest_path, "JPEG", quality=QUALITY, optimize=True)
-            
-            # Save hash
-            hashes[file_key] = current_hash
-            
-            # Compare size for output
-            src_mb = src_path.stat().st_size / (1024 * 1024)
-            dst_mb = dest_path.stat().st_size / (1024 * 1024)
-            print(f"✓ {src_path.name}: {src_mb:.1f}MB -> {dst_mb:.2f}MB")
-            return True
-            
+        return True
+
     except Exception as e:
-        print(f"✗ Error processing {src_path.name}: {e}")
+        print(f"  ✗ Error {src_path.name}: {e}")
         return False
+
+
+def process_image(
+    src_path: Path,
+    dest_path: Path,
+    cache: dict[str, dict[str, float | int]],
+    file_key: str,
+) -> bool:
+    """Process a single image: check mtime+size, convert/downscale, save.
+
+    Returns True if the image was (re)processed.
+    """
+    meta = get_file_meta(src_path)
+
+    # Fast path: skip if source unchanged (mtime + size match)
+    cached = cache.get(file_key)
+    if (
+        dest_path.exists()
+        and cached
+        and cached.get("mtime") == meta["mtime"]
+        and cached.get("size") == meta["size"]
+    ):
+        return False  # Up-to-date
+
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if is_raw_file(src_path):
+        success = process_raw(src_path, dest_path)
+    else:
+        success = process_standard_image(src_path, dest_path)
+
+    if success:
+        cache[file_key] = meta
+        src_mb = meta["size"] / (1024 * 1024)
+        dst_kb = dest_path.stat().st_size / 1024
+        fmt = "RAW" if is_raw_file(src_path) else "IMG"
+        print(f"  ✓ [{fmt}] {src_path.name}: {src_mb:.1f} MB → {dst_kb:.0f} KB")
+
+    return success
+
 
 def main() -> None:
     if not RAW_IMAGES_DIR or not RAW_IMAGES_DIR.exists():
@@ -86,39 +141,47 @@ def main() -> None:
         return
 
     WORKSPACE_ASSETS.mkdir(parents=True, exist_ok=True)
-    
+
     # Load hashes
-    hashes: dict[str, str] = {}
+    cache: dict[str, dict[str, float | int]] = {}
     if HASH_FILE.exists():
         try:
             with HASH_FILE.open("r") as f:
-                hashes = json.load(f)
+                cache = json.load(f)
         except json.JSONDecodeError:
             pass
-    
-    # Find all standard image formats
-    image_files = []
-    for ext in ("*.[jJ][pP][gG]", "*.[jJ][pP][eE][gG]", "*.[pP][nN][gG]", "*.[wW][eE][bB][pP]", "*.[tT][iI][fF]", "*.[tT][iI][fF][fF]"):
-        image_files.extend(RAW_IMAGES_DIR.glob(ext))
-    
+
+    # Find all supported image files recursively
+    image_files = sorted(
+        f for f in RAW_IMAGES_DIR.rglob("*") if f.is_file() and f.suffix.lower() in SUFFIXES_ALL
+    )
+
     if not image_files:
-        print(f"Info: No images (jpg, png, webp, tiff) found in {RAW_IMAGES_DIR}")
+        print(f"Info: No images found in {RAW_IMAGES_DIR}")
         return
-        
-    print(f"Processing {len(image_files)} images...")
-    processed_count = 0
+
+    print(f"📷 Found {len(image_files)} images in {RAW_IMAGES_DIR}")
+    
+    total_processed = 0
+    total_skipped = 0
+
     for img_path in image_files:
-        if process_image(img_path, WORKSPACE_ASSETS, hashes):
-            processed_count += 1
-            
+        rel_path = img_path.relative_to(RAW_IMAGES_DIR)
+        dest_path = WORKSPACE_ASSETS / rel_path.with_suffix(".jpg")
+        file_key = str(rel_path)
+
+        if process_image(img_path, dest_path, cache, file_key):
+            total_processed += 1
+        else:
+            total_skipped += 1
+
     # Save hashes
     with HASH_FILE.open("w") as f:
-        json.dump(hashes, f, indent=2)
-        
-    if processed_count > 0:
-        print(f"\n✓ Rescaled {processed_count} assets. Run 'just freeze' to back them up to publication/assets/.")
-    else:
-        print("\n✓ All assets are already up-to-date.")
+        json.dump(cache, f, indent=2)
+
+    print(f"\n✓ prepare-assets done: {total_processed} new/updated, {total_skipped} cached")
+    if total_processed > 0:
+        print("  Use 'just add-asset <path/to/file.jpg>' to add specific assets to publication.")
 
 if __name__ == "__main__":
     main()

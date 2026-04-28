@@ -33,6 +33,7 @@ just lint
 - `src/{{ python_module_name }}/` - Main Python source code
 - `notebooks/` - Jupyter notebooks for exploration
 - `tests/` - Pytest suite
+- `data/` - Contains `raw/` and `test/` data (content is gitignored)
 {% if include_external_data %}- `.env` - Local environment variables (paths to external data)
 {% endif %}
 ## 🧪 Quality checks
@@ -92,17 +93,21 @@ The workflow is as follows:
    ```bash
    just prepare-assets
    ```
-   The script `scripts/prepare_assets.py` loads the images, downscales them optimally to a max width of 1500px, and saves them compressed (without loss of print quality) into the gitignored `_workspace/output/assets/` directory.
+   The script `scripts/prepare_assets.py` loads the images, downscales them optimally to a max width of 1500px, and saves them compressed (without loss of print quality) into the gitignored `_workspace/output/assets/` directory. *(Note: To process Nikon `.nef` files, run `uv add --dev rawpy` to install the optional RAW processing backend).*
 
 2. **Generate Plots & Tables:**
    Your Python code (`src/`) also saves generated plots and tables into the workspace (`_workspace/output/figures/`).
 
 3. **Freeze:**
    To allow the Git repo to compile independently, these smaller assets must be committed to Git.
+   However, `freeze` handles **pipeline outputs** (figures, tables) and **photos** differently:
+
+   - **Photos:** Run `just add-asset <path>` to manually add a specific processed photo to your publication. `freeze` will only *refresh* already added photos to prevent Git bloat.
+   - **Figures & Tables:** `just freeze` automatically syncs (adds/updates/deletes) all generated plots and tables.
+
    ```bash
    just freeze
    ```
-   This copies everything from `_workspace/output/{assets,figures,tables}` to `publication/{assets,figures,tables}`. **These directories are then committed to Git!**
 
 ### Compile Typst
 

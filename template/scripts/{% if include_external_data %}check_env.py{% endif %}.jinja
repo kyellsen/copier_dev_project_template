@@ -1,0 +1,46 @@
+"""Checks if all environment variables and data paths are accessible. Called by: just check-env"""
+
+import os
+import sys
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(PROJECT_ROOT / ".env")
+
+errors: list[str] = []
+
+# Automatically detect required paths by parsing .env.example
+env_example = PROJECT_ROOT / ".env.example"
+required_vars = []
+if env_example.exists():
+    content = env_example.read_text()
+    for line in content.splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            var_name = line.split("=")[0].strip()
+            required_vars.append(var_name)
+else:
+    # Fallback to known variables if .env.example is missing
+    required_vars = [
+{% if include_typst %}        "{{ python_module_name | upper }}_RAW_ASSETS_DIR",
+{% endif %}{% if workspace_location_external %}        "WORKSPACE_ROOT",
+{% endif %}    ]
+
+for var in required_vars:
+    val = os.environ.get(var)
+    if not val:
+        errors.append(f"✗ {var} is not set in .env")
+        continue
+
+    # If the variable looks like a directory path, verify it exists
+    if var.endswith("_DIR") or var.endswith("_ROOT"):
+        if not Path(val).is_dir():
+            errors.append(f"✗ {var} is not reachable or not a directory: {val}")
+
+if errors:
+    print("\n".join(errors))
+    sys.exit(1)
+
+print("✓ Environment OK — all data paths reachable")

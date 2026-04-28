@@ -1,20 +1,167 @@
-"""Copies pipeline output to publication/ for git commit."""
+"""Syncs pipeline output and refreshes committed photos for git commit.
+
+1. Smart-sync figures/ and tables/ from workspace output to publication/
+   (add new, update changed, remove stale files).
+2. Refresh already-committed photos in publication/assets/ from the
+   compressed cache (update only, no add/delete).
+3. Size warnings for files > WARN_SIZE_MB.
+"""
+
+import os
 import shutil
 from pathlib import Path
+from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SOURCE = PROJECT_ROOT / "_workspace" / "output"
-PUB = PROJECT_ROOT / "publication"
+load_dotenv(PROJECT_ROOT / ".env")
 
-for subdir in ["figures", "tables", "assets"]:
-    dest = PUB / subdir
-    src = SOURCE / subdir
+{% if not workspace_location_external %}SOURCE = PROJECT_ROOT / "_workspace" / "output"
+{% else %}workspace_root_str = os.environ.get("WORKSPACE_ROOT")
+if not workspace_root_str:
+    print("❌ Error: WORKSPACE_ROOT not set in .env")
+    exit(1)
+SOURCE = Path(workspace_root_str) / "output"
+{% endif %}PUB = PROJECT_ROOT / "publication"
+
+WARN_SIZE_MB = 2.0
+
+# Full sync (add/update/delete) for pipeline outputs
+SYNC_DIRS = ["figures", "tables"]
+
+
+def smart_sync(src: Path, dest: Path) -> tuple[int, int, int]:
+    """Sync src → dest with add/update/delete semantics.
+
+    Returns (added, updated, removed) counts.
+    """
+    added, updated, removed = 0, 0, 0
+
+    # 1. Copy new/changed files
     if src.exists():
-        dest.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(src, dest, dirs_exist_ok=True)
-        print(f"✓ {subdir}/ copied/updated")
-    else:
-        dest.mkdir(parents=True, exist_ok=True)
-        print(f"⚠ {subdir}/ is empty — created empty directory")
+        for f in sorted(src.rglob("*")):
+            if f.is_file():
+                rel = f.relative_to(src)
+                target = dest / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
 
-print("✓ Plots/Tables frozen. Ready to commit.")
+                if not target.exists():
+                    shutil.copy2(f, target)
+                    added += 1
+                    print(f"  + {rel}")
+                elif f.stat().st_mtime > target.stat().st_mtime:
+                    shutil.copy2(f, target)
+                    updated += 1
+                    print(f"  ~ {rel}")
+
+    # 2. Remove stale files (in dest but not in src)
+    if dest.exists():
+        for f in sorted(dest.rglob("*")):
+            if f.is_file():
+                rel = f.relative_to(dest)
+                if not src.exists() or not (src / rel).exists():
+                    f.unlink()
+                    removed += 1
+                    print(f"  ✗ {rel} (removed — not in source)")
+
+        # Clean up empty directories
+        for d in sorted(dest.rglob("*"), reverse=True):
+            if d.is_dir() and not any(d.iterdir()):
+                d.rmdir()
+
+    return added, updated, removed
+
+
+def refresh_photos(cache_dir: Path, pub_dir: Path) -> int:
+    """Refresh already-committed photos from cache (update only, no add/delete).
+
+    Walks publication/assets/ and updates any file that has a newer version
+    in the workspace cache. Does NOT add new files or remove existing ones —
+    that's the job of 'just add-asset'.
+
+    Returns the number of updated files.
+    """
+    updated = 0
+
+    if not pub_dir.exists():
+        return 0
+
+    for f in sorted(pub_dir.rglob("*")):
+        if f.is_file():
+            rel = f.relative_to(pub_dir)
+            cached = cache_dir / rel
+            if cached.exists() and cached.stat().st_mtime > f.stat().st_mtime:
+                shutil.copy2(cached, f)
+                updated += 1
+                print(f"  ~ {rel}")
+
+    return updated
+
+
+def main() -> None:
+    """Run smart-sync for pipeline outputs and refresh committed photos."""
+    total_added, total_updated, total_removed = 0, 0, 0
+
+    # 1. Smart-sync pipeline outputs (figures, tables)
+    for subdir in SYNC_DIRS:
+        src = SOURCE / subdir
+        dest = PUB / subdir
+        dest.mkdir(parents=True, exist_ok=True)
+
+        if not src.exists() or not any(src.rglob("*")):
+            print(f"⚠ {subdir}/ — source empty, skipped")
+            continue
+
+        print(f"\n🔄 {subdir}/")
+        added, updated, removed = smart_sync(src, dest)
+        total_added += added
+        total_updated += updated
+        total_removed += removed
+        print(f"  → +{added} new, ~{updated} updated, -{removed} removed")
+
+    # 2. Refresh committed photos from cache
+    cache_assets = SOURCE / "assets"
+    pub_assets = PUB / "assets"
+    if pub_assets.exists() and cache_assets.exists():
+        print("\n📷 assets/ (refresh committed photos)")
+        photo_updated = refresh_photos(cache_assets, pub_assets)
+        total_updated += photo_updated
+        if photo_updated > 0:
+            print(f"  → ~{photo_updated} photos refreshed from cache")
+        else:
+            print("  → all photos up-to-date")
+
+    # 3. Size warnings
+    print()
+    total_mb = 0.0
+    warnings: list[str] = []
+    for subdir in [*SYNC_DIRS, "assets"]:
+        dest = PUB / subdir
+        if not dest.exists():
+            continue
+        for f in dest.rglob("*"):
+            if f.is_file():
+                size_mb = f.stat().st_size / (1024 * 1024)
+                total_mb += size_mb
+                if size_mb > WARN_SIZE_MB:
+                    rel = f.relative_to(PUB)
+                    warnings.append(f"  ⚠ {rel}: {size_mb:.1f} MB")
+
+    if warnings:
+        print("Size warnings (> 2 MB):")
+        for w in warnings:
+            print(w)
+
+    changes = total_added + total_updated + total_removed
+    print(
+        f"\n✓ Freeze done: +{total_added} new, ~{total_updated} updated, "
+        f"-{total_removed} removed ({total_mb:.1f} MB total)"
+    )
+
+    if changes > 0:
+        print("  Next: git add publication/ && git commit")
+    else:
+        print("  Nothing changed.")
+
+
+if __name__ == "__main__":
+    main()

@@ -80,10 +80,21 @@ export-pdf filename:
     cp publication/main.pdf "{{filename}}.pdf"
     @echo "✅ Exported to {{filename}}.pdf"
 
-# === Freeze ===
+# === Assets & Freeze ===
+# Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale)
 prepare-assets:
     uv run python scripts/prepare_assets.py
 
+# Copy a single photo from cache to publication (e.g. just add-asset subdir/IMG_2313.jpg)
+add-asset file:
+    @mkdir -p "publication/assets/$(dirname {{file}})"
+{% if not workspace_location_external %}    @cp "_workspace/output/assets/{{file}}" "publication/assets/{{file}}"
+{% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
+    @cp "${WORKSPACE_ROOT}/output/assets/{{file}}" "publication/assets/{{file}}"
+{% endif %}    @echo "✓ Copied: publication/assets/{{file}}"
+    @echo "  Typst:  image(\"../../assets/{{file}}\")"
+
+# Smart-sync pipeline outputs (figures + tables) and refresh committed photos
 freeze:
     uv run python scripts/freeze.py
 {% endif %}
