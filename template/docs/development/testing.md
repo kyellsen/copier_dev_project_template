@@ -1,0 +1,126 @@
+# Testing Guide
+
+> **Status:** Normative (Mandatory) · **Scope:** All Contributors & AI Agents
+
+---
+
+## 1. Test Markers
+
+Every test function **MUST** have exactly one marker. Tests without a marker will be rejected.
+
+| Marker | Included in `just ci` | Target duration |
+| --- | --- | --- |
+| `unit` | ✅ | < 1s/test |
+| `integration` | ✅ | < 30s/test |
+| `system` | ✅ | < 60s/test |
+
+---
+
+## 2. Directory Structure
+
+Test location **MUST** match the marker. Mixing markers in a single directory is **FORBIDDEN**.
+
+| Location | Marker |
+| --- | --- |
+| `tests/unit/` | `@pytest.mark.unit` |
+| `tests/integration/` | `@pytest.mark.integration` |
+| `tests/system/` | `@pytest.mark.system` |
+
+---
+
+## 3. Running Tests
+
+### Individual Suites
+
+```bash
+just test-unit     # Unit tests only (no I/O, no external deps)
+just test-int      # Integration tests (real filesystem / external data)
+just test-system   # System tests (full pipeline end-to-end)
+just test          # Quick dev: Unit + Integration
+just test-all      # All three tiers
+```
+
+### Quality Gates
+
+```bash
+just check         # Ruff + Mypy (fast, < 10s)
+just ci            # check + all tests (full pipeline)
+```
+
+### When to Run What
+
+| Situation | Command | What it covers |
+| --- | --- | --- |
+| During development | `just test` | Unit + Integration (quick feedback) |
+| Before every commit | `just check` | Lint, types (no tests) |
+| Before push | `just ci` | Full pipeline: lint + types + all tests |
+
+---
+
+## 4. Writing Tests
+
+### Unit Tests (`@pytest.mark.unit`)
+
+- Test the **behavior** of small units, not implementation details.
+- **Zero I/O**: no filesystem, no network, no database.
+- Use `tmp_path` for synthetic data, `unittest.mock` for dependencies.
+- Each test should run in < 1 second.
+
+### Integration Tests (`@pytest.mark.integration`)
+
+- Use **real** external data or filesystem.
+- Must be **self-contained**: skip gracefully when data is unavailable.
+- Do **NOT** mock the data source — the whole point is testing real I/O.
+
+### System Tests (`@pytest.mark.system`)
+
+- Full pipeline end-to-end.
+- Assert **end results**, not internal call sequences.
+
+---
+
+## 5. Test Quality & Anti-Patterns
+
+> **Status:** Normative (Mandatory)
+> This section is especially critical for AI-generated code.
+
+### 5.1 Anti-Patterns (FORBIDDEN)
+
+The following patterns will lead to test rejection:
+
+- **Existence/Import Tests:** Tests that only verify imports or whether a function exists without asserting observable behavior.
+- **Trivial Equality:** Tests that only assert constants or default values (unless the value is an explicit domain contract).
+- **Call-Chain Mirroring:** Tests that replicate internal logic instead of testing visible behavior.
+- **Mock-Heavy Verification:** Tests whose primary logic consists of setting up mocks rather than verifying domain logic. If mocking is substantially larger than the assertion, the test design is flawed.
+
+### 5.2 Delete vs. Refactor Rule
+
+- **DELETE** if a test provides no clear business or architectural value.
+- **DELETE** if a test artificially inflates coverage but would not catch a real regression.
+- **REFACTOR** if a test covers a valuable contract but is written in a brittle way.
+
+### 5.3 Guidelines for AI Agents
+
+- **Check Before Adding:** Before adding a new test, verify whether an existing higher-level test already covers the same failure space.
+- **Prioritize Simplicity:** Favor simplicity and readability over exhaustive completeness.
+- **Avoid Coverage-Driven Bloat:** Do not generate tests solely to increase coverage.
+- **Document Intent:** New tests must clearly state (via naming or docstrings) the specific behavior they are safeguarding.
+
+---
+
+## 6. Naming Conventions
+
+| Element | Convention | Example |
+| --- | --- | --- |
+| Test file | `test_<module>.py` | `test_config.py` |
+| Test class | `Test<Feature>` | `TestCacheInvalidation` |
+| Test function | `test_<behavior>` | `test_missing_file_raises_error` |
+
+Test names should describe the **expected behavior**, not the implementation detail.
+
+---
+
+## See Also
+
+- `AGENTS.md` §4 — Testing Rules (markers, directory structure)
+- `pyproject.toml` `[tool.pytest.ini_options]` — Registered markers
