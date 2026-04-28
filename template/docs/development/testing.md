@@ -68,23 +68,63 @@ just ci            # check + all tests (full pipeline)
 
 ### Integration Tests (`@pytest.mark.integration`)
 
-- Use **real** external data or filesystem.
+- Use **real** sensor data from the Nextcloud directories (`$BA_KS_*_ROOT`).
 - Must be **self-contained**: skip gracefully when data is unavailable.
 - Do **NOT** mock the data source — the whole point is testing real I/O.
 
+**Pattern for data availability:**
+
+```python
+import os, pytest
+from pathlib import Path
+
+DATA_DIR = Path(os.environ.get("BA_KS_STUTTGART_ROOT", "")) / "data" / "raw" / "..."
+
+def _skip_if_no_data(directory: Path) -> Path:
+    if not directory.is_dir():
+        pytest.skip(f"Data not available: {directory}")
+    return directory
+```
+
 ### System Tests (`@pytest.mark.system`)
 
-- Full pipeline end-to-end.
+- Full pipeline end-to-end (parse → cache → analyse → plot).
 - Assert **end results**, not internal call sequences.
 
 ---
 
-## 5. Test Quality & Anti-Patterns
+## 5. Gatekeeper Tests (Vertrauensanker)
+
+Certain integration tests serve as **trust anchors** for the thesis. They validate
+that our binary parsers produce identical results to the vendor software exports.
+
+**These tests MUST pass before any parsed sensor data enters the thesis.**
+
+| Gatekeeper | Source (ours) | Reference (vendor) |
+| --- | --- | --- |
+| TMS-1 (`.tsw`) | Binary parser `treemotion/tsw.py` | CSV export in `tms/csv/` |
+| TMS-3 (`.twsb`) | Binary parser `treemotion/twsb.py` | CSV export in `tms/csv/` |
+
+**Tolerances:** values ±0.0001°, timestamps ±50 ms.
+
+```python
+@pytest.mark.integration
+def test_tsw_parser_matches_vendor_csv():
+    """TMS-1: Parse .tsw, compare row-by-row against vendor CSV export."""
+
+@pytest.mark.integration
+def test_twsb_parser_matches_vendor_csv():
+    """TMS-3: Parse .twsb, compare row-by-row against vendor CSV export."""
+```
+
+---
+
+## 6. Test Quality & Anti-Patterns
 
 > **Status:** Normative (Mandatory)
 > This section is especially critical for AI-generated code.
 
-### 5.1 Anti-Patterns (FORBIDDEN)
+### 6.1 Anti-Patterns (FORBIDDEN)
 
 The following patterns will lead to test rejection:
 
@@ -93,13 +133,13 @@ The following patterns will lead to test rejection:
 - **Call-Chain Mirroring:** Tests that replicate internal logic instead of testing visible behavior.
 - **Mock-Heavy Verification:** Tests whose primary logic consists of setting up mocks rather than verifying domain logic. If mocking is substantially larger than the assertion, the test design is flawed.
 
-### 5.2 Delete vs. Refactor Rule
+### 6.2 Delete vs. Refactor Rule
 
 - **DELETE** if a test provides no clear business or architectural value.
 - **DELETE** if a test artificially inflates coverage but would not catch a real regression.
 - **REFACTOR** if a test covers a valuable contract but is written in a brittle way.
 
-### 5.3 Guidelines for AI Agents
+### 6.3 Guidelines for AI Agents
 
 - **Check Before Adding:** Before adding a new test, verify whether an existing higher-level test already covers the same failure space.
 - **Prioritize Simplicity:** Favor simplicity and readability over exhaustive completeness.
@@ -108,13 +148,13 @@ The following patterns will lead to test rejection:
 
 ---
 
-## 6. Naming Conventions
+## 7. Naming Conventions
 
 | Element | Convention | Example |
 | --- | --- | --- |
-| Test file | `test_<module>.py` | `test_config.py` |
-| Test class | `Test<Feature>` | `TestCacheInvalidation` |
-| Test function | `test_<behavior>` | `test_missing_file_raises_error` |
+| Test file | `test_<module>.py` | `test_tensile.py` |
+| Test class | `Test<Feature>` | `TestLoadTensileTestTXT` |
+| Test function | `test_<behavior>` | `test_rejects_missing_columns` |
 
 Test names should describe the **expected behavior**, not the implementation detail.
 
@@ -124,3 +164,4 @@ Test names should describe the **expected behavior**, not the implementation det
 
 - `AGENTS.md` §4 — Testing Rules (markers, directory structure)
 - `pyproject.toml` `[tool.pytest.ini_options]` — Registered markers
+- `docs/development/milestones/v0.3.0_sensor_loaders.md` — Gatekeeper test specifications

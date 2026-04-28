@@ -13,6 +13,8 @@ or changed source files are reprocessed.
 
 import json
 import os
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -93,28 +95,16 @@ def process_standard_image(src_path: Path, dest_path: Path) -> bool:
         return False
 
 
-def process_image(
+def process_image_task(
     src_path: Path,
     dest_path: Path,
-    cache: dict[str, dict[str, float | int]],
+    meta: dict[str, float | int],
     file_key: str,
-) -> bool:
-    """Process a single image: check mtime+size, convert/downscale, save.
+) -> tuple[bool, str, dict[str, float | int] | None]:
+    """Process a single image: convert/downscale, save. Runs in worker process.
 
-    Returns True if the image was (re)processed.
+    Returns (success_flag, file_key, meta).
     """
-    meta = get_file_meta(src_path)
-
-    # Fast path: skip if source unchanged (mtime + size match)
-    cached = cache.get(file_key)
-    if (
-        dest_path.exists()
-        and cached
-        and cached.get("mtime") == meta["mtime"]
-        and cached.get("size") == meta["size"]
-    ):
-        return False  # Up-to-date
-
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
     if is_raw_file(src_path):
@@ -123,16 +113,20 @@ def process_image(
         success = process_standard_image(src_path, dest_path)
 
     if success:
-        cache[file_key] = meta
         src_mb = meta["size"] / (1024 * 1024)
         dst_kb = dest_path.stat().st_size / 1024
         fmt = "RAW" if is_raw_file(src_path) else "IMG"
         print(f"  ✓ [{fmt}] {src_path.name}: {src_mb:.1f} MB → {dst_kb:.0f} KB")
+        return True, file_key, meta
 
-    return success
+    return False, file_key, None
 
 
 def main() -> None:
+    # Fix rawpy/OpenMP deadlocks on Linux
+    if multiprocessing.get_start_method(allow_none=True) != "spawn":
+        multiprocessing.set_start_method("spawn", force=True)
+
     if not RAW_IMAGES_DIR or not RAW_IMAGES_DIR.exists():
         print(f"Info: Source directory for assets does not exist or is not configured.")
         print(f"  Please set {env_var_name} in your .env file!")
@@ -163,17 +157,41 @@ def main() -> None:
     print(f"📷 Found {len(image_files)} images in {RAW_IMAGES_DIR}")
     
     total_processed = 0
-    total_skipped = 0
+    tasks = []
 
+    # Check cache sequentially (fast, avoids process overhead)
     for img_path in image_files:
         rel_path = img_path.relative_to(RAW_IMAGES_DIR)
         dest_path = WORKSPACE_ASSETS / rel_path.with_suffix(".jpg")
         file_key = str(rel_path)
+        meta = get_file_meta(img_path)
 
-        if process_image(img_path, dest_path, cache, file_key):
-            total_processed += 1
-        else:
-            total_skipped += 1
+        cached = cache.get(file_key)
+        if (
+            dest_path.exists()
+            and cached
+            and cached.get("mtime") == meta["mtime"]
+            and cached.get("size") == meta["size"]
+        ):
+            continue  # Up-to-date
+            
+        tasks.append((img_path, dest_path, meta, file_key))
+
+    # Process new/changed files in parallel using all CPU cores
+    if tasks:
+        cores = multiprocessing.cpu_count()
+        print(f"  → Processing {len(tasks)} files using {cores} CPU cores...")
+        with ProcessPoolExecutor(max_workers=cores) as executor:
+            futures = [
+                executor.submit(process_image_task, *task) for task in tasks
+            ]
+            for future in as_completed(futures):
+                success, file_key, meta_result = future.result()
+                if success and meta_result is not None:
+                    total_processed += 1
+                    cache[file_key] = meta_result
+
+    total_skipped = len(image_files) - total_processed
 
     # Save hashes
     with HASH_FILE.open("w") as f:
