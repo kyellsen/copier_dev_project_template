@@ -115,7 +115,7 @@ nuke: distclean
 {% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
     @test "${WORKSPACE_ROOT}" != "/" || (echo "Refusing to clean /"; exit 1)
     @test "${WORKSPACE_ROOT}" != "$HOME" || (echo "Refusing to clean HOME"; exit 1)
-    @test "${WORKSPACE_ROOT}" != "/mnt/data" || (echo "Refusing to clean /mnt/data"; exit 1)
+    @test "${WORKSPACE_ROOT}" != "${HOME}/data" || (echo "Refusing to clean ${HOME}/data"; exit 1)
     @test -d "${WORKSPACE_ROOT}" || (echo "Workspace not found"; exit 1)
     rm -rf "${WORKSPACE_ROOT:?}"/*
     @echo "✓ Workspace cleaned."

@@ -80,11 +80,11 @@ All project-specific environment variables **MUST** use the prefix `{{ python_mo
 
 ```
 # ✅ Correct
-{{ python_module_name | upper }}_DATA_ROOT=/mnt/data/...
+{{ python_module_name | upper }}_DATA_ROOT=~/data/...
 {{ python_module_name | upper }}_DEBUG=true
 
 # ❌ Wrong — missing prefix
-DATA_ROOT=/mnt/data/...
+DATA_ROOT=~/data/...
 DEBUG=true
 ```
 
