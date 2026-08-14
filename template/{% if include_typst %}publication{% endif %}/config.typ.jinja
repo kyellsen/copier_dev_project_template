@@ -5,6 +5,17 @@
 #let my-author-email = "{{ author_email }}"
 #let my-date = datetime.today().display("[day].[month].[year]")
 #let my-keywords = ("{{ project_name }}",)
+{% if publication_type == 'report' %}
+// === Gutachten-Fakten (Deckblatt, Footer, Unterschriftsblock) ===
+#let my-doc-label = "Baumgutachten"
+#let my-report-no = "00000 (Entwurf)"
+#let my-client = "Auftraggeber (Name, Anschrift)"
+#let my-subject = "Gegenstand des Gutachtens"
+#let my-parcel = "Flur …, Flurstück … (Gemeinde …)"
+#let my-survey-date = "Stichtag offen"
+#let my-place = "Timmdorf"
+#let my-author-address = "Lindenweg 4, 23714 Timmdorf"
+{% endif %}
 
 // === Semantische Farben ===
 #let color-code-bg = luma(245)

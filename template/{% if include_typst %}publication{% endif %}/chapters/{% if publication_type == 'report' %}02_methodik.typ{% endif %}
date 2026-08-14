@@ -1,0 +1,20 @@
+// 02_methodik.typ — generischer Methodik-Baustein für Baumgutachten (FLL)
+= Untersuchungsmethodik
+
+== Begriffsdefinitionen
+
+*Verkehrssicherheit:* _„Zustand eines Baumes (insbesondere Stand- und Bruchsicherheit […]), in dem er weder in seiner Gesamtheit noch in seinen Teilen eine vorhersehbare konkrete Gefahr darstellt."_ @fll2020
+
+*Verkehrssicherungspflicht:* _„Verpflichtung des Baumeigentümers bzw. der auf andere Weise für Bäume Verantwortlichen, die erforderlichen Vorkehrungen zu treffen, um Gefahren für Dritte möglichst abzuwenden."_ @fll2020
+
+*Bruchsicherheit:* _„Ausreichende Fähigkeit und Beschaffenheit des Baumes, dem Bruch von Stamm- und Kronenteilen beim Einwirken von Lasten, z. B. Sturm, Schnee, Eis und Eigengewicht zu widerstehen."_ @fll2020
+
+*Standsicherheit:* _„Ausreichende Verankerung des Baumes im Boden gegenüber Lasten, z. B. Sturm, Schnee, Eis und Eigengewicht."_ @fll2020
+
+*Vitalität:* _„Lebenstüchtigkeit/Lebenskraft eines Organismus."_ @fll2020 Die Vitalitätsbeurteilung anhand der Kronenstruktur erfolgt nach #cite(<roloff2013>, form: "prose"). Da vitale Bäume nicht unbedingt verkehrssicher sind — und umgekehrt — wird bei der Baumansprache zwischen Vitalität und Stand-/Bruchsicherheit unterschieden.
+
+== Erfassungs- und Bewertungsmethodik
+
+Die Begutachtung erfolgt als *fachlich qualifizierte Inaugenscheinnahme vom Boden* im Sinne der FLL-Baumkontrollrichtlinien @fll2020 unter Anwendung der Grundsätze der Visual-Tree-Assessment-Methode (VTA) @mattheck2014. Eingehende Untersuchungen im Sinne der FLL-Baumuntersuchungsrichtlinien @fll2013 erfolgen nur, sofern die visuelle Begutachtung Zweifel an Verkehrssicherheit oder Tragfähigkeit ergibt. Für Pflegemaßnahmen wird eine Ausführung entsprechend ZTV-Baumpflege @fll2017 zugrunde gelegt.
+
+// TODO: projektspezifische Erfassung ergänzen (Messverfahren, Geräte, Kartierung, Stichtag)

@@ -42,6 +42,13 @@ include_typst:
   help: "Include Typst publication setup directory?"
   default: false
 
+publication_type:
+  type: str
+  help: "Publication layout (report = expert report/Gutachten, thesis = scientific thesis)"
+  choices: [report, thesis]
+  default: report
+  when: "{{ include_typst }}"
+
 include_external_data:
   type: bool
   help: "Connect to external Nextcloud data directories? (adds .env for data paths)"

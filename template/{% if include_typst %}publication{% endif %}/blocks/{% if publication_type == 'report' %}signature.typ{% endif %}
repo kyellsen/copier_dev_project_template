@@ -1,0 +1,11 @@
+// signature.typ — Unterschriftsblock (FLL-Baumkontrollrichtlinien 5.2.6: Name und Datum)
+#import "../config.typ": *
+
+#v(2cm)
+
+#my-place, den #my-date
+
+#v(2cm)
+
+#line(length: 6cm, stroke: 0.5pt)
+#my-author

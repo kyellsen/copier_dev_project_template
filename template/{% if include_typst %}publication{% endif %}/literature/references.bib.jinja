@@ -1,3 +1,53 @@
 % Format: BibLaTeX
 % Hier die Bibliografie aus Zotero per BetterBibTeX einfügen (Keep updated)
 % Hinweis: Typst ist strikter als biber. Felder wie "year = {unbekannt}" verursachen Parse-Fehler.
+{% if publication_type == 'report' %}
+% Standardkorpus Baumgutachten (projektspezifische Quellen ergänzen):
+
+@standard{din18920,
+  title        = {DIN 18920:2014-07, Vegetationstechnik im Landschaftsbau – Schutz von Bäumen, Pflanzenbeständen und Vegetationsflächen bei Baumaßnahmen},
+  organization = {DIN e.V.},
+  publisher    = {Beuth Verlag},
+  year         = {2014},
+  doi          = {10.31030/2149444},
+}
+
+@book{fll2013,
+  title     = {Baumuntersuchungsrichtlinien: Richtlinien für eingehende Untersuchungen zur Überprüfung der Verkehrssicherheit von Bäumen},
+  editor    = {{ '{{FLL}}' }},
+  publisher = {Forschungsgesellschaft Landschaftsentwicklung Landschaftsbau e.V.},
+  year      = {2013},
+  edition   = {1},
+}
+
+@book{fll2017,
+  title     = {ZTV-Baumpflege: Zusätzliche Technische Vertragsbedingungen und Richtlinien für Baumpflege},
+  editor    = {{ '{{FLL}}' }},
+  publisher = {Forschungsgesellschaft Landschaftsentwicklung Landschaftsbau e.V.},
+  year      = {2017},
+  edition   = {6},
+}
+
+@book{fll2020,
+  title     = {Baumkontrollrichtlinien: Richtlinien für die Baumkontrolle zur Überprüfung der Verkehrssicherheit},
+  editor    = {{ '{{FLL}}' }},
+  publisher = {Forschungsgesellschaft Landschaftsentwicklung Landschaftsbau e.V.},
+  year      = {2020},
+  edition   = {3},
+}
+
+@book{mattheck2014,
+  author    = {Mattheck, Claus and Bethge, Klaus and Weber, Karlheinz},
+  title     = {Die Körpersprache der Bäume: Enzyklopädie des Visual Tree Assessment},
+  publisher = {Karlsruher Institut für Technologie (KIT)},
+  year      = {2014},
+}
+
+@book{roloff2013,
+  editor    = {Roloff, Andreas},
+  title     = {Baumpflege: Baumbiologische Grundlagen und Anwendung},
+  publisher = {Ulmer},
+  year      = {2013},
+  edition   = {2},
+}
+{% endif %}
