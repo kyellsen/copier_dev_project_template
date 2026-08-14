@@ -89,6 +89,24 @@ DEBUG=true
 ```
 
 **Exceptions:** Third-party standards keep their names (e.g., `POSTGRES_USER`, `DOCKER_HOST`).
+{% if include_typst and publication_type == 'report' %}
+## 8. Expert-Report Rules (BINDING)
+
+This repository produces a German expert report (Gutachten). **Before any work on
+the report text**, read and apply
+**[docs/gutachten/massgaben-fachgutachten.md](docs/gutachten/massgaben-fachgutachten.md)**:
+
+1. **Never invent facts** — no measurements, tree data, site-visit details, case law,
+   or citations. Mark gaps as `[ERGÄNZEN: …]` and list all open placeholders at the end
+   of your output.
+2. **The agent does not assess.** It drafts, structures, and checks; the expert judgment
+   and responsibility belong solely to the signing expert.
+3. The **canonical chapter skeleton and standard labels** (Maßgaben C.3/C.4) are binding;
+   describe first (Ergebnisse), then evaluate (Schlussfolgerungen) — never mix.
+4. Verify **edition years of all cited standards** against Maßgaben Teil F; never cite
+   entries listed under F.1.
+5. Before any release or delivery (`just deliver`), work through **checklist Teil H**.
+{% endif %}
 ## See Also
 
 - **[README.md](README.md)** — Project overview, quick start

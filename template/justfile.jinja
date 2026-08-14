@@ -151,7 +151,32 @@ export-pdf filename:
         echo "✅ Exported to Nextcloud outbox: $DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf"; \
     fi
 
-# === Assets & Freeze ===
+{% if publication_type == 'report' %}# === Delivery (frozen, hashed submission states) ===
+alias del := deliver
+
+# Deliver the report: fresh compile → outbox + SHA256 manifest + read-only + git tag
+deliver filename:
+    @test -z "$(git status --porcelain)" || (echo "❌ Working tree dirty — commit first; the delivered state must be reproducible." && exit 1)
+    cd publication && typst compile main.typ
+    @OUT=""; \
+    if [ -n "${{ python_module_name | upper }}_DATA_ROOT" ] && [ -d "${{ python_module_name | upper }}_DATA_ROOT/outbox" ]; then OUT="${{ python_module_name | upper }}_DATA_ROOT/outbox"; \
+    elif [ -n "$DATA_ROOT" ] && [ -d "$DATA_ROOT/outbox" ]; then OUT="$DATA_ROOT/outbox"; \
+    else echo "❌ No outbox found — set {{ python_module_name | upper }}_DATA_ROOT in .env"; exit 1; fi; \
+    PDF="$OUT/{{ '{{filename}}' }}.pdf"; MAN="$OUT/{{ '{{filename}}' }}.manifest.txt"; \
+    chmod u+w "$PDF" "$MAN" 2>/dev/null || true; \
+    cp publication/main.pdf "$PDF"; \
+    { echo "file: {{ '{{filename}}' }}.pdf"; \
+      echo "sha256: $(sha256sum "$PDF" | cut -d' ' -f1)"; \
+      echo "git-commit: $(git rev-parse HEAD)"; \
+      echo "typst: $(typst --version)"; \
+      echo "date: $(date +%Y-%m-%d)"; } > "$MAN"; \
+    chmod 444 "$PDF" "$MAN"; \
+    git tag -f "delivered/$(date +%Y-%m-%d)"; \
+    echo "✅ Delivered: $PDF"; \
+    echo "🔒 Manifest: $MAN (both read-only)"; \
+    echo "🏷️  Git tag: delivered/$(date +%Y-%m-%d)"
+
+{% endif %}# === Assets & Freeze ===
 
 # Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale)
 prepare-assets:

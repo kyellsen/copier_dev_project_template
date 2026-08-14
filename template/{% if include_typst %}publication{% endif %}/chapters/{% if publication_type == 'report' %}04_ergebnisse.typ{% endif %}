@@ -1,0 +1,23 @@
+// 04_ergebnisse.typ — rein beschreibend; Bewertung erst in 05_schlussfolgerungen
+= Ergebnisse
+
+== Standort und Baumumfeld
+
+// TODO: Standort, Nutzungsintensität/Schadenspotenzial, Baumscheibe, durchwurzelbarer
+// Raum, Leitungen/bauliche Anlagen beschreiben (Maßgaben D.1)
+
+== Baumdaten
+
+// TODO: Baumkataster füllen (publication/tables/baumdaten.csv, Pflichtfelder nach
+// Maßgaben D.1; Validierung: just check-data); Untersuchungsbedingungen dokumentieren
+// (Datum/Uhrzeit, Witterung, Belaubung, Einsehbarkeit, Hilfsmittel)
+
+== Zustand des Baumbestandes
+
+// TODO: Ergebnisse je Themenfeld rein beschreibend (Defektsymptome mit Lage/Maß,
+// Pilzfruchtkörper, Totholz, Stamm-/Kronen-/Wurzelbereich) — keine Bewertung hier
+
+== Artenschutzrechtliche Prüfung
+
+// TODO (Pflicht, Maßgaben E.2): Habitatstrukturen (Höhlen, Risse, Spalten, Horste)
+// untersuchen; Methode (Fernglas/Spektiv, Drohne, Bekletterung) und Ergebnis dokumentieren

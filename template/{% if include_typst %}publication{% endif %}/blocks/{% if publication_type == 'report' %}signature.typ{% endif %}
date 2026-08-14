@@ -9,3 +9,6 @@
 
 #line(length: 6cm, stroke: 0.5pt)
 #my-author
+#if my-qualification != none [
+  \ #text(size: 10pt)[#my-qualification]
+]

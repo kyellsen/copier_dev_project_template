@@ -10,10 +10,11 @@ dependencies = [
     "python-dotenv>=1.0",
     "pydantic>=2.0",
 {% if include_typst %}    "Pillow>=10.0",  # For downsampling high-resolution publication assets
-{% endif %}    # Uncomment data science dependencies as needed:
-    # "pandas>=2.2",
-    # "polars>=1.5",
-    # "numpy>=1.26",
+{% endif %}{% if include_typst and publication_type == 'report' %}    "polars>=1.5",  # Baumkataster validation (just check-data)
+{% endif %}    # Uncomment data science dependencies as needed (Polars first — avoid pandas
+    # unless a library forces it):
+{% if not (include_typst and publication_type == 'report') %}    # "polars>=1.5",
+{% endif %}    # "numpy>=1.26",
     # "matplotlib>=3.9",
     # "scipy>=1.13",
     # "seaborn>=0.13",

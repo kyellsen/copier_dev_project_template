@@ -31,16 +31,20 @@
     align: (right, left),
     column-gutter: 12pt,
     row-gutter: 8pt,
-    [*Nr.:*], [#my-report-no],
+    [*Gutachten-Nr.:*], [#my-report-no],
     [*Stichtag:*], [#my-survey-date],
-    [*Auftraggeber:*], [#my-client],
+    [*Auftraggeber\*In:*], [#my-client],
     [*Gegenstand:*], [#my-subject],
     [*Flurstück:*], [#my-parcel],
+    ..if my-copies != none { ([*Ausfertigungen:*], [#my-copies]) } else { () },
   )
 
   #v(1fr)
 
   #text[erstellt von #my-author, #my-author-address\ #link("mailto:" + my-author-email)[#my-author-email] — Stand: #my-date]
+  #if my-qualification != none [
+    \ #text(size: 10pt)[#my-qualification]
+  ]
 ]
 {% else %}// cover.typ — Deckblatt
 #import "../config.typ": *
