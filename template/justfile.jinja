@@ -1,101 +1,144 @@
 set dotenv-load
 
 # === Default ===
+# --unsorted keeps the section order below instead of sorting alphabetically,
+# so this reads as a grouped menu rather than one flat list.
+# Show all recipes, grouped by section
 default:
-    @just --list
+    @just --list --unsorted
 
 # === Setup ===
 alias s := setup
+
+# Create the venv and install everything the project needs
 setup:
     uv run python scripts/setup.py
 {% if include_precommit %}    @just install-hooks
 {% endif %}
 {% if include_precommit %}
 # === Git Hooks (pre-commit framework) ===
+
+# Wire the git hooks into this clone (setup does it too)
 install-hooks:
     @echo "\033[1m\033[96mInstalling Git hooks (pre-commit)\033[0m"
     uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 
+# Remove the git hooks from this clone
 uninstall-hooks:
     uv run pre-commit uninstall --hook-type pre-commit --hook-type pre-push
 {% endif %}
 {% if include_external_data %}
 # === Environment Check ===
+
+# Verify .env paths and external data roots actually exist
 check-env:
     uv run python scripts/check_env.py
 {% endif %}
 # === Code Quality ===
+
+# Report lint findings only (no formatting, no type check)
 lint:
     @uv run ruff check .
 
 alias c := check
+
+# Static quality gate: what CI runs. Run it before you commit.
 check:
     @uv run python scripts/check.py
 
+# Auto-fix what can be fixed: format, then apply safe lint fixes
 fix:
     @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
     uv run ruff format .
     uv run ruff check --fix .
 {% if include_typst %}
 # === Typst Quality ===
+
+# Check Typst formatting without writing (typstyle --check)
 check-typst:
     @echo "\033[1m\033[96mChecking Typst Formatting\033[0m"
     typstyle --check publication/
 {% endif %}
 # === Testing ===
+# Exit code 5 is pytest's "no tests collected" — expected while a suite is
+# still empty, so it is tolerated instead of failing the run.
+
+# Run unit tests only (fast, no I/O)
 test-unit:
     @echo "\033[1m\033[95m🚀 Running Unit Tests\033[0m"
     uv run pytest tests/unit -m unit -q -rs || test $? -eq 5
 
+# Run integration tests (touches files, DB, network fixtures)
 test-int:
     @echo "\033[1m\033[95m🚀 Running Integration Tests\033[0m"
     uv run pytest tests/integration -m integration -q -rs || test $? -eq 5
 
+# Run system tests (slow, end-to-end; not part of 'just test')
 test-system:
     @echo "\033[1m\033[95m🚀 Running System Tests\033[0m"
     uv run pytest tests/system -m system -q -rs || test $? -eq 5
 
 alias t := test
+
+# The everyday test run: unit + integration
 test: test-unit test-int
 
+# Everything including the slow system tests
 test-all: test-unit test-int test-system
 
 # === CI Pipeline ===
+
+# What CI runs — same checks as 'just check', machine-readable output
 ci:
     @uv run python scripts/check.py --ci
 
 # === Interactive ===
+
+# Start Jupyter Lab in the project venv
 lab:
     uv run jupyter lab
 
 # === Data Pipeline ===
 alias ana := analyze
+
+# Project-specific: your analysis entry point
 analyze:
     @echo "\033[1m\033[93m⚠️ 'analyze' target not implemented yet. Add it to your justfile.\033[0m"
 
 alias plt := plot
+
+# Project-specific: regenerate figures
 plot:
     @echo "\033[1m\033[93m⚠️ 'plot' target not implemented yet. Add it to your justfile.\033[0m"
 
 alias pip := pipeline
+
+# Project-specific: chain the steps above into one reproducible run
 pipeline:
     @echo "\033[1m\033[93m⚠️ 'pipeline' target not implemented yet. Combine your steps here.\033[0m"
 {% if include_typst %}
 # === Typst ===
+
 # Export Formelzeichenverzeichnis from ColumnDef schemas → publication/tables/symbols.typ
 symbols:
     @test -f scripts/export_symbols.py && uv run python scripts/export_symbols.py || echo "ℹ️ scripts/export_symbols.py not found"
 
 alias pub := publication
+
+# Compile publication/main.typ once
 publication:
     cd publication && typst compile main.typ
 
 alias pw := publication-watch
 alias pub-watch := publication-watch
+
+# Compile, open in Okular, then recompile on every save
 publication-watch:
     cd publication && typst compile main.typ && (okular main.pdf > /dev/null 2>&1 &) && typst watch main.typ
 
 alias export := export-pdf
+
+# Copy the compiled PDF out under a chosen name (and to the Nextcloud outbox if set)
 export-pdf filename:
     @test -f publication/main.pdf || (echo "❌ publication/main.pdf not found. Run 'just pub' first." && exit 1)
     @cp publication/main.pdf "{{ '{{filename}}' }}.pdf"
@@ -109,12 +152,14 @@ export-pdf filename:
     fi
 
 # === Assets & Freeze ===
+
 # Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale)
 prepare-assets:
     uv run python scripts/prepare_assets.py
 
-# Copy a single photo from cache to publication (e.g. just add-photo subdir/IMG_2313.jpg)
 alias add-asset := add-photo
+
+# Copy a single photo from cache to publication (e.g. just add-photo subdir/IMG_2313.jpg)
 add-photo file:
     @mkdir -p "publication/assets/$(dirname {{ '{{file}}' }})"
 {% if not workspace_location_external %}    @cp "_workspace/output/assets/{{ '{{file}}' }}" "publication/assets/{{ '{{file}}' }}"
@@ -128,6 +173,7 @@ freeze:
     uv run python scripts/freeze.py
 {% endif %}
 # === Cleanup (3 Stages) ===
+
 # 🧹 Stage 1: Clear caches (safe, daily)
 clean:
     @uv run python scripts/clean.py
@@ -137,6 +183,9 @@ distclean: clean
     rm -rf .venv
     @echo "✓ .venv removed. Run 'just setup' to reinstall."
 
+# The guards below are the safety net instead of a prompt: nuke stays
+# non-interactive so it can run unattended, but it refuses to delete an
+# unset, root, HOME or missing workspace path.
 # ☢️  Stage 3: distclean + Workspace + Build artifacts (Factory Reset)
 nuke: distclean
 {% if not workspace_location_external %}    rm -rf _workspace/*
