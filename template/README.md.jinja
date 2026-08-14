@@ -102,7 +102,7 @@ The workflow is as follows:
    To allow the Git repo to compile independently, these smaller assets must be committed to Git.
    However, `freeze` handles **pipeline outputs** (figures, tables) and **photos** differently:
 
-   - **Photos:** Run `just add-asset <path>` to manually add a specific processed photo to your publication. `freeze` will only *refresh* already added photos to prevent Git bloat.
+   - **Photos:** Run `just add-photo <path>` to manually add a specific processed photo to your publication. `freeze` will only *refresh* already added photos to prevent Git bloat.
    - **Figures & Tables:** `just freeze` automatically syncs (adds/updates/deletes) all generated plots and tables.
 
    ```bash

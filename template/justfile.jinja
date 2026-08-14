@@ -8,6 +8,17 @@ default:
 alias s := setup
 setup:
     uv run python scripts/setup.py
+{% if include_precommit %}    @just install-hooks
+{% endif %}
+{% if include_precommit %}
+# === Git Hooks (pre-commit framework) ===
+install-hooks:
+    @echo "\033[1m\033[96mInstalling Git hooks (pre-commit)\033[0m"
+    uv run pre-commit install --hook-type pre-commit --hook-type pre-push
+
+uninstall-hooks:
+    uv run pre-commit uninstall --hook-type pre-commit --hook-type pre-push
+{% endif %}
 {% if include_external_data %}
 # === Environment Check ===
 check-env:
@@ -25,7 +36,12 @@ fix:
     @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
     uv run ruff format .
     uv run ruff check --fix .
-
+{% if include_typst %}
+# === Typst Quality ===
+check-typst:
+    @echo "\033[1m\033[96mChecking Typst Formatting\033[0m"
+    typstyle --check publication/
+{% endif %}
 # === Testing ===
 test-unit:
     @echo "\033[1m\033[95m🚀 Running Unit Tests\033[0m"
@@ -66,10 +82,15 @@ pipeline:
     @echo "\033[1m\033[93m⚠️ 'pipeline' target not implemented yet. Combine your steps here.\033[0m"
 {% if include_typst %}
 # === Typst ===
+# Export Formelzeichenverzeichnis from ColumnDef schemas → publication/tables/symbols.typ
+symbols:
+    @test -f scripts/export_symbols.py && uv run python scripts/export_symbols.py || echo "ℹ️ scripts/export_symbols.py not found"
+
 alias pub := publication
 publication:
     cd publication && typst compile main.typ
 
+alias pw := publication-watch
 alias pub-watch := publication-watch
 publication-watch:
     cd publication && typst compile main.typ && (okular main.pdf > /dev/null 2>&1 &) && typst watch main.typ
@@ -77,22 +98,30 @@ publication-watch:
 alias export := export-pdf
 export-pdf filename:
     @test -f publication/main.pdf || (echo "❌ publication/main.pdf not found. Run 'just pub' first." && exit 1)
-    cp publication/main.pdf "{{filename}}.pdf"
-    @echo "✅ Exported to {{filename}}.pdf"
+    @cp publication/main.pdf "{{ '{{filename}}' }}.pdf"
+    @echo "✅ Exported to {{ '{{filename}}' }}.pdf"
+    @if [ -n "$BA_KS_DATA_ROOT" ] && [ -d "$BA_KS_DATA_ROOT/outbox" ]; then \
+        cp publication/main.pdf "$BA_KS_DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf" && \
+        echo "✅ Exported to Nextcloud outbox: $BA_KS_DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf"; \
+    elif [ -n "$DATA_ROOT" ] && [ -d "$DATA_ROOT/outbox" ]; then \
+        cp publication/main.pdf "$DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf" && \
+        echo "✅ Exported to Nextcloud outbox: $DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf"; \
+    fi
 
 # === Assets & Freeze ===
 # Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale)
 prepare-assets:
     uv run python scripts/prepare_assets.py
 
-# Copy a single photo from cache to publication (e.g. just add-asset subdir/IMG_2313.jpg)
-add-asset file:
-    @mkdir -p "publication/assets/$(dirname {{file}})"
-{% if not workspace_location_external %}    @cp "_workspace/output/assets/{{file}}" "publication/assets/{{file}}"
+# Copy a single photo from cache to publication (e.g. just add-photo subdir/IMG_2313.jpg)
+alias add-asset := add-photo
+add-photo file:
+    @mkdir -p "publication/assets/$(dirname {{ '{{file}}' }})"
+{% if not workspace_location_external %}    @cp "_workspace/output/assets/{{ '{{file}}' }}" "publication/assets/{{ '{{file}}' }}"
 {% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
-    @cp "${WORKSPACE_ROOT}/output/assets/{{file}}" "publication/assets/{{file}}"
-{% endif %}    @echo "✓ Copied: publication/assets/{{file}}"
-    @echo "  Typst:  image(\"../../assets/{{file}}\")"
+    @cp "${WORKSPACE_ROOT}/output/assets/{{ '{{file}}' }}" "publication/assets/{{ '{{file}}' }}"
+{% endif %}    @echo "✓ Copied: publication/assets/{{ '{{file}}' }}"
+    @echo "  Typst:  image(\"../../assets/{{ '{{file}}' }}\")"
 
 # Smart-sync pipeline outputs (figures + tables) and refresh committed photos
 freeze:

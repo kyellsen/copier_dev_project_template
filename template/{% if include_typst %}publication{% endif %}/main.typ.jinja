@@ -2,32 +2,47 @@
 // Engine: typst compile | Build: typst compile main.typ
 
 #import "config.typ": *
+#import "lib/data.typ": *
+#import "@preview/unify:0.8.0": num, qty, unit
 
 // === Dokument-Metadaten (PDF) ===
 #set document(
   title: my-title,
   author: my-author,
+  keywords: my-keywords,
 )
 
-// === Seitenlayout ===
+// === Seitenlayout (DIN A4, Standard-Seitenränder) ===
 #set page(
   paper: "a4",
   numbering: "1",
+  margin: (top: 2.5cm, bottom: 2cm, left: 3cm, right: 2.5cm),
 )
 
 // === Schrift & Typografie ===
-// Typst nutzt standardmäßig "Linux Libertine", was für wissenschaftliche Arbeiten ideal ist.
+// Libertinus Serif — moderner Palatino/Linux Libertine Fork mit exzellenten Mathe-Glyphen.
 #set text(
-  size: 11pt, // Etwas kompakter als 12pt, da Libertine recht groß ausfällt
+  font: "Libertinus Serif",
+  size: 11pt,
   lang: "de",
   region: "DE",
 )
 
-// Blocksatz für Fließtext
-#set par(justify: true)
+// Blocksatz, DIN 5008-konformer Zeilenabstand
+#set par(justify: true, leading: 0.8em, spacing: 1.2em)
 
-// === Überschriften ===
+// === Überschriften & Formeln ===
+// DIN 1421: Maximal 3 nummerierte Gliederungsebenen
 #set heading(numbering: "1.1")
+#set math.equation(numbering: "(1)")
+
+// Ebene 4+: unnummerierte Darstellung, nicht im Inhaltsverzeichnis, aber im PDF-Bookmark
+#show heading.where(level: 4): set heading(outlined: false, bookmarked: true)
+#show heading.where(level: 4): it => {
+  v(0.5em)
+  text(weight: "bold", size: 1em, it.body)
+  v(0.3em)
+}
 
 // Hauptkapitel (Ebene 1) beginnen auf einer neuen Seite
 #show heading.where(level: 1): it => {
@@ -41,10 +56,14 @@
 // Tabellen-Überschriften gehören nach oben
 #show figure.where(kind: table): set figure.caption(position: top)
 
+// --- Booktabs-Style Tabellen ---
+#show table: set table(stroke: none, inset: (x: 8pt, y: 6pt))
+#show table: set par(leading: 0.65em)
+
 // === Quellcode ===
 #show raw.where(block: true): it => {
   block(
-    fill: luma(245),
+    fill: color-code-bg,
     inset: 8pt,
     radius: 2pt,
     width: 100%,
@@ -53,7 +72,7 @@
 }
 
 // === Hyperlinks ===
-#show link: set text(fill: rgb(0, 80, 160))
+#show link: set text(fill: color-link)
 
 // ======================================================================
 // DOKUMENT
@@ -70,6 +89,20 @@
 #outline(title: "Inhaltsverzeichnis", depth: 3, indent: auto)
 #pagebreak()
 
+// --- Abbildungs- & Tabellenverzeichnis (bei Bedarf aktivieren) ---
+// #heading(numbering: none, outlined: true)[Abbildungsverzeichnis]
+// #outline(title: none, target: figure.where(kind: image))
+// #pagebreak()
+//
+// #heading(numbering: none, outlined: true)[Tabellenverzeichnis]
+// #outline(title: none, target: figure.where(kind: table))
+// #pagebreak()
+
+// --- Formelzeichenverzeichnis (automatisch via `just symbols` generiert) ---
+// #heading(numbering: none, outlined: true)[Formelzeichenverzeichnis]
+// #include "tables/symbols.typ"
+// #pagebreak()
+
 // Zurück zu arabischen Seitenzahlen für den Hauptteil
 #set page(numbering: "1")
 #counter(page).update(1)
@@ -79,5 +112,14 @@
 Dies ist eine Typst-Vorlage für #my-title. Sie nutzt bewusst die nativen Typst-Standards, 
 welche für MINT-Publikationen exzellent geeignet sind, und verzichtet auf unnötiges Over-Engineering.
 
+// Zahlen & Einheiten lassen sich DIN-konform mit unify oder den data-helpers setzen:
+// Beispiel: #qty("42.5", "kN") oder #val(res.force_max)
+
 // === Literaturverzeichnis ===
-#bibliography("literature/references.bib", style: "apa")
+#heading(numbering: none, outlined: true)[Literaturverzeichnis]
+#bibliography("literature/references.bib", title: none, style: "apa")
+
+// === Anhang (optional) ===
+// #set heading(numbering: "A.1")
+// #counter(heading).update(0)
+// #heading(level: 1)[Anhang]

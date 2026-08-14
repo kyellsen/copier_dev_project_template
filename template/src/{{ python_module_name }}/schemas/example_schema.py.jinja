@@ -1,0 +1,30 @@
+"""Example schema definition demonstrating ColumnDef SSOT usage."""
+
+from {{ python_module_name }}.schemas.columns import ColumnDef
+
+EXAMPLE_COLUMNS = (
+    ColumnDef(
+        name="force_max",
+        dtype="Float64",
+        unit="kN",
+        symbol='F_"max"',
+        labels={"de": "Maximale Zugkraft", "en": "Maximum tensile force"},
+        descriptions={
+            "de": "Gemessene Maximallast bis zum Bruch",
+            "en": "Measured maximum load until failure",
+        },
+        context="mechanics",
+    ),
+    ColumnDef(
+        name="diameter_dbh",
+        dtype="Float64",
+        unit="cm",
+        symbol="d_1.3",
+        labels={"de": "Brusthöhendurchmesser", "en": "Diameter at breast height"},
+        descriptions={
+            "de": "Stammdurchmesser in 1,30 m Höhe",
+            "en": "Trunk diameter at 1.30 m height",
+        },
+        context="geometry",
+    ),
+)

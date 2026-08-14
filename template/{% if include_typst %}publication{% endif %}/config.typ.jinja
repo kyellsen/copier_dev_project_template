@@ -1,8 +1,15 @@
 // === Projektmetadaten ===
 #let my-title = "{{ project_name }}"
+#let my-subtitle = "{{ description }}"
 #let my-author = "{{ author }}"
 #let my-author-email = "{{ author_email }}"
 #let my-date = datetime.today().display("[day].[month].[year]")
+#let my-keywords = ("{{ project_name }}",)
 
-// === Pfade ===
+// === Semantische Farben ===
+#let color-code-bg = luma(245)
+#let color-link = rgb(0, 80, 160)
+#let color-accent = rgb(0, 100, 80)
+
+// === Pfade & Medien ===
 #let my-cover-picture = "cover_picture.png"

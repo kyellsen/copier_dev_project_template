@@ -8,6 +8,7 @@ authors = [
 requires-python = ">={{ python_version }}"
 dependencies = [
     "python-dotenv>=1.0",
+    "pydantic>=2.0",
 {% if include_typst %}    "Pillow>=10.0",  # For downsampling high-resolution publication assets
 {% endif %}    # Uncomment data science dependencies as needed:
     # "pandas>=2.2",
@@ -21,6 +22,10 @@ dependencies = [
     # "scikit-learn>=1.4",
     # "sqlalchemy>=2.0",
     # "tqdm>=4.66",
+    # GeoPython (GIS):
+    # "geopandas>=1.0",
+    # "shapely>=2.0",
+    # "pyogrio>=0.10",
 ]
 
 [dependency-groups]
@@ -30,7 +35,8 @@ dev = [
     "pytest>=8.0",
     "jupyterlab>=4.3",
     "ipykernel>=6.29",
-]
+{% if include_precommit %}    "pre-commit>=4.0",
+{% endif %}]
 
 [build-system]
 requires = ["hatchling"]
