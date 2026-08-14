@@ -58,7 +58,11 @@ fix:
 check-typst:
     @echo "\033[1m\033[96mChecking Typst Formatting\033[0m"
     typstyle --check publication/
-{% endif %}
+{% if publication_type == 'report' %}
+# Validate the tree cadastre CSV against the pydantic schema (Massgaben D.1)
+check-data:
+    uv run python scripts/check_data.py
+{% endif %}{% endif %}
 # === Testing ===
 # Exit code 5 is pytest's "no tests collected" — expected while a suite is
 # still empty, so it is tolerated instead of failing the run.
@@ -127,7 +131,8 @@ alias pub := publication
 
 # Compile publication/main.typ once
 publication:
-    cd publication && typst compile main.typ
+{% if publication_type == 'report' %}    @test -e "${XDG_DATA_HOME:-$HOME/.local/share}/typst/packages/local/gutachten-bausteine" || (echo "❌ @local/gutachten-bausteine not installed — run 'just install' in ~/code/reports/gutachten_bausteine" && exit 1)
+{% endif %}    cd publication && typst compile main.typ
 
 alias pw := publication-watch
 alias pub-watch := publication-watch

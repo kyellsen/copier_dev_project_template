@@ -1,4 +1,6 @@
 // 04_ergebnisse.typ — rein beschreibend; Bewertung erst in 05_schlussfolgerungen
+#import "@local/gutachten-bausteine:0.1.0": baumkataster-tabelle, baum-abschnitte, artenschutz-pruefung
+
 = Ergebnisse
 
 == Standort und Baumumfeld
@@ -8,16 +10,19 @@
 
 == Baumdaten
 
-// TODO: Baumkataster füllen (publication/tables/baumdaten.csv, Pflichtfelder nach
-// Maßgaben D.1; Validierung: just check-data); Untersuchungsbedingungen dokumentieren
-// (Datum/Uhrzeit, Witterung, Belaubung, Einsehbarkeit, Hilfsmittel)
+// Pflichtfelder nach Maßgaben D.1; Validierung: just check-data
+#let baeume = csv("../tables/baumdaten.csv", row-type: dictionary)
 
-== Zustand des Baumbestandes
+#baumkataster-tabelle(baeume, caption: [Baumkataster (Erfassung \[ERGÄNZEN: Datum\])])
 
-// TODO: Ergebnisse je Themenfeld rein beschreibend (Defektsymptome mit Lage/Maß,
-// Pilzfruchtkörper, Totholz, Stamm-/Kronen-/Wurzelbereich) — keine Bewertung hier
+// TODO: Untersuchungsbedingungen dokumentieren (Datum/Uhrzeit, Witterung, Belaubung,
+// Einsehbarkeit, Hilfsmittel)
+
+== Zustand der Bäume
+
+// Je-Baum-Abschnitte aus dem Kataster (Einzelbaum = eine CSV-Zeile); rein beschreibend
+#baum-abschnitte(baeume)
 
 == Artenschutzrechtliche Prüfung
 
-// TODO (Pflicht, Maßgaben E.2): Habitatstrukturen (Höhlen, Risse, Spalten, Horste)
-// untersuchen; Methode (Fernglas/Spektiv, Drohne, Bekletterung) und Ergebnis dokumentieren
+#artenschutz-pruefung()

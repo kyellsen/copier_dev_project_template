@@ -106,6 +106,11 @@ the report text**, read and apply
 4. Verify **edition years of all cited standards** against Maßgaben Teil F; never cite
    entries listed under F.1.
 5. Before any release or delivery (`just deliver`), work through **checklist Teil H**.
+6. Standard text blocks come **version-pinned** from `@local/gutachten-bausteine`
+   (repo: `~/code/reports/gutachten_bausteine`, install via `just install` there).
+   Never paste block texts inline — import them. Tree data lives in
+   `publication/tables/baumdaten.csv` (schema: Massgaben D.1, validate with
+   `just check-data`).
 {% endif %}
 ## See Also
 

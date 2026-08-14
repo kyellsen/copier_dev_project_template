@@ -1,0 +1,44 @@
+"""Validate the tree cadastre CSV against the pydantic schema (Massgaben D.1).
+
+Polars first: the CSV is read with Polars; every row is validated with pydantic.
+Exit code 1 on any violation so `just check-data` can gate commits/builds.
+"""
+
+import sys
+from pathlib import Path
+
+import polars as pl
+from pydantic import ValidationError
+
+from {{ python_module_name }}.schemas.baumdaten import Baum
+
+CSV = Path("publication/tables/baumdaten.csv")
+
+
+def main() -> int:
+    if not CSV.exists():
+        print(f"❌ {CSV} not found")
+        return 1
+
+    df = pl.read_csv(CSV, infer_schema_length=0)  # read as strings, pydantic coerces
+    errors: list[str] = []
+    for i, row in enumerate(df.iter_rows(named=True), start=2):  # 2 = first data line
+        try:
+            Baum(**row)
+        except ValidationError as exc:
+            for err in exc.errors():
+                field = ".".join(str(p) for p in err["loc"])
+                errors.append(f"line {i} (nummer={row.get('nummer')}): {field} — {err['msg']}")
+
+    if errors:
+        print(f"❌ {CSV}: {len(errors)} validation error(s)")
+        for e in errors:
+            print(f"   - {e}")
+        return 1
+
+    print(f"✅ {CSV}: {df.height} tree record(s) valid (schema: Massgaben D.1)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -224,7 +224,7 @@ Nur bei konkreten Anhaltspunkten. Zu dokumentieren sind:
 | **ZTV-Baumpflege** | `fll2017` | 6. Ausgabe **2017** (ersetzt 2006) | Baumpflegemaßnahmen; gilt als anerkannte Regel der Technik i. S. d. VOB; Grundlage für Maßnahmenbeschreibung und Leistungsverzeichnis |
 | **DIN 18920** | `din18920` | **2026-06** | Schutz von Bäumen, Pflanzenbeständen und Vegetationsflächen bei Baumaßnahmen |
 | **R SBB** (FGSV) | `rsbb2023` | **2023** | Schutz von Bäumen und Vegetationsbeständen bei Baumaßnahmen; R-1-Regelwerk mit hoher Verbindlichkeit, insbesondere als Vertragsbestandteil; eingeführt mit ARS Nr. 28/2023 des BMDV |
-| **Methode Koch** i. V. m. FLL-Wertermittlungsrichtlinie **2002** | `fll2002` | Richtwerte SVK/GALK, Ausgabe **2026/2027** | Gehölzwertermittlung / Schadensersatz; Sachwertverfahren, höchstrichterlich anerkannt |
+| **Methode Koch** i. V. m. FLL-Wertermittlungsrichtlinie | `fll2002` | **2002** (Richtwerte SVK/GALK: Ausgabe 2026/2027) | Gehölzwertermittlung / Schadensersatz; Sachwertverfahren, höchstrichterlich anerkannt |
 | **GALK-Musterdienstanweisung** für Regelkontrollen von Bäumen | `galk2021` | **2021** | Umsetzung der FLL-Baumkontrollrichtlinien 2020 in kommunalen Verwaltungen |
 | Ergänzend | — | DWA-M 162 (Bäume und Leitungen); DIN 18915–18919; FLL-Empfehlungen für Baumpflanzungen Teil 1 (2015) und Teil 2 (2010); H ArtB (2017) | je nach Fragestellung |
 
