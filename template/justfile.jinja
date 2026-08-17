@@ -5,16 +5,25 @@ set dotenv-load
 import? 'project.just'
 
 # === Default ===
-# --unsorted keeps the section order below instead of sorting alphabetically,
-# so this reads as a grouped menu rather than one flat list.
-# Show all recipes, grouped by section
+# A bare `just` answers one question: what do I type today? Everything else is
+# one command away. Without this, a first-time reader meets thirty recipes in
+# alphabetical order and cannot tell which three matter.
+# The everyday commands — `just --list` shows all of them, grouped
 default:
-    @just --list --unsorted
+{%- if include_typst %}
+    @echo "  just pub        compile the document"
+    @echo "  just pub-watch  recompile on every save, open in the viewer"
+{%- endif %}
+    @echo "  just check      the quality gate — run it before you commit"
+    @echo "  just fix        auto-format and auto-fix what check complains about"
+    @echo ""
+    @echo "  everything else, grouped by when you need it:  just --list"
 
 # === Setup ===
 alias s := setup
 
 # Create the venv and install everything the project needs
+[group('setup')]
 setup:
     uv run python scripts/setup.py
 {% if include_precommit %}    @just install-hooks
@@ -23,11 +32,13 @@ setup:
 # === Git Hooks (pre-commit framework) ===
 
 # Wire the git hooks into this clone (setup does it too)
+[group('setup')]
 install-hooks:
     @echo "\033[1m\033[96mInstalling Git hooks (pre-commit)\033[0m"
     uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 
 # Remove the git hooks from this clone
+[group('setup')]
 uninstall-hooks:
     uv run pre-commit uninstall --hook-type pre-commit --hook-type pre-push
 {% endif %}
@@ -35,38 +46,45 @@ uninstall-hooks:
 # === Environment Check ===
 
 # Verify .env paths and external data roots actually exist
+[group('setup')]
 check-env:
     uv run python scripts/check_env.py
 {% endif %}
 # === Code Quality ===
 
 # Report lint findings only (no formatting, no type check)
+[group('plumbing')]
 lint:
     @uv run ruff check .
 
 alias c := check
 
 # Static quality gate: what CI runs. Run it before you commit.
+[group('daily')]
 check:
     @uv run python scripts/check.py
 
 # Auto-fix what can be fixed: format, then apply safe lint fixes
+[group('daily')]
 fix:
     @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
     uv run ruff format .
     uv run ruff check --fix .
 
 # Refresh AGENTS.canon.md from ~/code/_templates/agents_canon
+[group('setup')]
 agents-sync:
     @~/code/_templates/agents_canon/sync.sh .
 
 # Report whether this repo's canon pin is behind the canon repo
+[group('setup')]
 agents-outdated:
     @cd ~/code/_templates/agents_canon && just outdated
 {% if include_typst %}
 # === Typst Quality ===
 
 # Check Typst formatting without writing (typstyle --check)
+[group('plumbing')]
 check-typst:
     @echo "\033[1m\033[96mChecking Typst Formatting\033[0m"
     typstyle --check publication/
@@ -76,16 +94,19 @@ check-typst:
 # still empty, so it is tolerated instead of failing the run.
 
 # Run unit tests only (fast, no I/O)
+[group('plumbing')]
 test-unit:
     @echo "\033[1m\033[95m🚀 Running Unit Tests\033[0m"
     uv run pytest tests/unit -m unit -q -rs || test $? -eq 5
 
 # Run integration tests (touches files, DB, network fixtures)
+[group('plumbing')]
 test-int:
     @echo "\033[1m\033[95m🚀 Running Integration Tests\033[0m"
     uv run pytest tests/integration -m integration -q -rs || test $? -eq 5
 
 # Run system tests (slow, end-to-end; not part of 'just test')
+[group('plumbing')]
 test-system:
     @echo "\033[1m\033[95m🚀 Running System Tests\033[0m"
     uv run pytest tests/system -m system -q -rs || test $? -eq 5
@@ -93,20 +114,24 @@ test-system:
 alias t := test
 
 # The everyday test run: unit + integration
+[group('release')]
 test: test-unit test-int
 
 # Everything including the slow system tests
+[group('release')]
 test-all: test-unit test-int test-system
 
 # === CI Pipeline ===
 
 # What CI runs — same checks as 'just check', machine-readable output
+[group('release')]
 ci:
     @uv run python scripts/check.py --ci
 
 # === Interactive ===
 
 # Start Jupyter Lab in the project venv
+[group('data')]
 lab:
     uv run jupyter lab
 
@@ -114,30 +139,35 @@ lab:
 alias ana := analyze
 
 # Project-specific: your analysis entry point
+[group('data')]
 analyze:
     @echo "\033[1m\033[93m⚠️ 'analyze' target not implemented yet. Add it to your justfile.\033[0m"
 
 alias plt := plot
 
 # Project-specific: regenerate figures
+[group('data')]
 plot:
     @echo "\033[1m\033[93m⚠️ 'plot' target not implemented yet. Add it to your justfile.\033[0m"
 
 alias pip := pipeline
 
 # Project-specific: chain the steps above into one reproducible run
+[group('data')]
 pipeline:
     @echo "\033[1m\033[93m⚠️ 'pipeline' target not implemented yet. Combine your steps here.\033[0m"
 {% if include_typst %}
 # === Typst ===
 
 # Export Formelzeichenverzeichnis from ColumnDef schemas → publication/tables/symbols.typ
+[group('data')]
 symbols:
     @test -f scripts/export_symbols.py && uv run python scripts/export_symbols.py || echo "ℹ️ scripts/export_symbols.py not found"
 
 alias pub := publication
 
 # Compile publication/main.typ once
+[group('daily')]
 publication:
     cd publication && typst compile main.typ
 
@@ -145,12 +175,14 @@ alias pw := publication-watch
 alias pub-watch := publication-watch
 
 # Compile, open in Okular, then recompile on every save
+[group('daily')]
 publication-watch:
     cd publication && typst compile main.typ && (okular main.pdf > /dev/null 2>&1 &) && typst watch main.typ
 
 alias export := export-pdf
 
 # Copy the compiled PDF out under a chosen name (and to the Nextcloud outbox if set)
+[group('release')]
 export-pdf filename:
     @test -f publication/main.pdf || (echo "❌ publication/main.pdf not found. Run 'just pub' first." && exit 1)
     @cp publication/main.pdf "{{ '{{filename}}' }}.pdf"
@@ -166,12 +198,14 @@ export-pdf filename:
 # === Assets & Freeze ===
 
 # Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale)
+[group('data')]
 prepare-assets:
     uv run python scripts/prepare_assets.py
 
 alias add-asset := add-photo
 
 # Copy a single photo from cache to publication (e.g. just add-photo subdir/IMG_2313.jpg)
+[group('data')]
 add-photo file:
     @mkdir -p "publication/assets/$(dirname {{ '{{file}}' }})"
 {% if not workspace_location_external %}    @cp "_workspace/output/assets/{{ '{{file}}' }}" "publication/assets/{{ '{{file}}' }}"
@@ -181,16 +215,19 @@ add-photo file:
     @echo "  Typst:  image(\"../../assets/{{ '{{file}}' }}\")"
 
 # Smart-sync pipeline outputs (figures + tables) and refresh committed photos
+[group('data')]
 freeze:
     uv run python scripts/freeze.py
 {% endif %}
 # === Cleanup (3 Stages) ===
 
 # 🧹 Stage 1: Clear caches (safe, daily)
+[group('plumbing')]
 clean:
     @uv run python scripts/clean.py
 
 # 🧼 Stage 2: clean + remove .venv (reinstall required: just setup)
+[group('plumbing')]
 distclean: clean
     rm -rf .venv
     @echo "✓ .venv removed. Run 'just setup' to reinstall."
@@ -199,6 +236,7 @@ distclean: clean
 # non-interactive so it can run unattended, but it refuses to delete an
 # unset, root, HOME or missing workspace path.
 # ☢️  Stage 3: distclean + Workspace + Build artifacts (Factory Reset)
+[group('plumbing')]
 nuke: distclean
 {% if not workspace_location_external %}    rm -rf _workspace/*
     @mkdir -p _workspace/output/figures _workspace/output/tables{% if include_typst %} _workspace/output/assets{% endif %}

@@ -7,6 +7,7 @@ default:
 # === Setup ===
 
 # Wire the versioned pre-commit hook into this clone
+[group('setup')]
 install-hooks:
     git config core.hooksPath scripts/git-hooks
     @echo "✅ core.hooksPath → scripts/git-hooks"
@@ -14,11 +15,13 @@ install-hooks:
 # === House rules ===
 
 # Refresh both AGENTS.canon.md copies from ~/code/_templates/agents_canon
+[group('plumbing')]
 agents-sync:
     @~/code/_templates/agents_canon/sync.sh .
     @~/code/_templates/agents_canon/sync.sh template
 
 # Report whether this repo's canon pins are behind the canon repo
+[group('plumbing')]
 agents-outdated:
     @cd ~/code/_templates/agents_canon && just outdated
 
@@ -27,9 +30,11 @@ agents-outdated:
 alias c := check
 
 # Static gate: canon integrity in both copies, plus a real render of the template
+[group('daily')]
 check: check-canon check-render
 
 # AGENTS.canon.md is generated — a hand edit would fork the house rules silently
+[group('plumbing')]
 check-canon:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -43,6 +48,7 @@ check-canon:
     echo "✅ canon integrity — $(sed -n 's/^version: //p' .agents-canon)"
 
 # Render into a throwaway project and check it came out whole
+[group('plumbing')]
 check-render:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -78,6 +84,7 @@ check-render:
     echo "✅ template renders: canon pin intact, justfile parses, generated Python compiles"
 
 # Generate a throwaway project and keep it, for looking at the result by hand
+[group('daily')]
 probe target="/tmp/probe-dev-project":
     rm -rf "{{ target }}"
     uv run --no-project --with copier copier copy --vcs-ref HEAD "$(pwd)" "{{ target }}"
