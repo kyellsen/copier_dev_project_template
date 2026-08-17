@@ -1,5 +1,11 @@
 // main.typ — {{ project_name }}
-// Engine: typst compile | Build: typst compile main.typ
+// Engine: typst compile | Build: just pub
+//
+// Generic publication skeleton. If this project is a Gutachten or a thesis,
+// the matching overlay template replaces this file with a thin document that
+// gets its layout from a versioned Typst package:
+//   ~/code/reports/gutachten_bausteine   (Gutachten)
+//   ~/code/projects/thesis_bausteine     (Thesis)
 
 #import "config.typ": *
 #import "lib/data.typ": *
@@ -79,25 +85,27 @@
 // ======================================================================
 
 // --- Deckblatt ---
-#include "cover/cover.typ"
+#page(numbering: none)[
+  #set align(center)
+  #v(3cm)
+  #text(size: 20pt, weight: "bold")[#my-title]
+  #v(0.6cm)
+  #text(size: 11pt, style: "italic")[#my-subtitle]
+  #v(1.5cm)
+  #image("cover/" + my-cover-picture, width: 40%)
+  #v(1fr)
+  #text[#my-author\ #link("mailto:" + my-author-email)[#my-author-email] — Stand: #my-date]
+]
 
 // --- Verzeichnisse ---
-// Römische Seitenzahlen für Verzeichnisse (optional, aber in MINT oft üblich)
+// Römische Seitenzahlen für Verzeichnisse (in MINT oft üblich)
 #set page(numbering: "I")
 #counter(page).update(1)
 
 #outline(title: "Inhaltsverzeichnis", depth: 3, indent: auto)
 #pagebreak()
 
-{% if publication_type == 'report' %}// --- Abbildungs- & Tabellenverzeichnis ---
-#heading(numbering: none, outlined: true)[Abbildungsverzeichnis]
-#outline(title: none, target: figure.where(kind: image))
-#pagebreak()
-
-#heading(numbering: none, outlined: true)[Tabellenverzeichnis]
-#outline(title: none, target: figure.where(kind: table))
-#pagebreak()
-{% else %}// --- Abbildungs- & Tabellenverzeichnis (bei Bedarf aktivieren) ---
+// --- Abbildungs- & Tabellenverzeichnis (bei Bedarf aktivieren) ---
 // #heading(numbering: none, outlined: true)[Abbildungsverzeichnis]
 // #outline(title: none, target: figure.where(kind: image))
 // #pagebreak()
@@ -105,67 +113,24 @@
 // #heading(numbering: none, outlined: true)[Tabellenverzeichnis]
 // #outline(title: none, target: figure.where(kind: table))
 // #pagebreak()
-{% endif %}
 
 // --- Formelzeichenverzeichnis (automatisch via `just symbols` generiert) ---
 // #heading(numbering: none, outlined: true)[Formelzeichenverzeichnis]
 // #include "tables/symbols.typ"
 // #pagebreak()
 
-{% if publication_type == 'report' %}// Hauptteil: arabische Seitenzahlen mit Gutachten-Footer (Seite X von Y)
-#set page(
-  numbering: "1",
-  footer: context [
-    #set text(size: 9pt)
-    Gutachten Nr. #my-report-no
-    #h(1fr)
-    Seite #counter(page).display() von #counter(page).final().first()
-  ],
-)
-#counter(page).update(1)
-
-// === Hauptteil (kanonische Gliederung, Maßgaben C.3/C.4) ===
-#include "chapters/01_auftrag_und_anlass.typ"
-#include "chapters/02_grundlagen.typ"
-#include "chapters/03_methodik.typ"
-#include "chapters/04_ergebnisse.typ"
-#include "chapters/05_schlussfolgerungen.typ"
-#include "chapters/06_zusammenfassung.typ"
-
-// Zahlen & Einheiten lassen sich DIN-konform mit unify oder den data-helpers setzen:
-// Beispiel: #qty("42.5", "kN") oder #val(res.force_max)
-{% else %}// Zurück zu arabischen Seitenzahlen für den Hauptteil
+// Zurück zu arabischen Seitenzahlen für den Hauptteil
 #set page(numbering: "1")
 #counter(page).update(1)
 
 // === Hauptteil ===
-#heading(level: 1)[Einleitung]
+= Einleitung
 Dies ist eine Typst-Vorlage für #my-title. Sie nutzt bewusst die nativen Typst-Standards,
 welche für MINT-Publikationen exzellent geeignet sind, und verzichtet auf unnötiges Over-Engineering.
 
 // Zahlen & Einheiten lassen sich DIN-konform mit unify oder den data-helpers setzen:
 // Beispiel: #qty("42.5", "kN") oder #val(res.force_max)
-{% endif %}
 
 // === Literaturverzeichnis ===
 #heading(numbering: none, outlined: true)[Literaturverzeichnis]
 #bibliography("literature/references.bib", title: none, style: "apa")
-
-{% if publication_type == 'report' %}// === Unterschrift (FLL-Baumkontrollrichtlinien 5.2.6: Name und Datum) ===
-#include "blocks/signature.typ"
-
-// === Anhang ===
-#set heading(numbering: "A.1")
-#counter(heading).update(0)
-#heading(level: 1)[Anhang]
-
-== Anlagen
-Dem Gutachten liegen als Anlagen bei:
-
-// TODO: Anlagen auflisten (Karten, Kataster, Fotodokumentation, Pläne)
-- …
-{% else %}// === Anhang (optional) ===
-// #set heading(numbering: "A.1")
-// #counter(heading).update(0)
-// #heading(level: 1)[Anhang]
-{% endif %}

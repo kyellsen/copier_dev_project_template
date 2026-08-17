@@ -1,55 +1,6 @@
 % Format: BibLaTeX
-% Hier die Bibliografie aus Zotero per BetterBibTeX einfügen (Keep updated)
+% Hier die Bibliografie aus Zotero per BetterBibTeX einfügen (Keep updated).
 % Hinweis: Typst ist strikter als biber. Felder wie "year = {unbekannt}" verursachen Parse-Fehler.
-{% if publication_type == 'report' %}
-% Standardkorpus Baumgutachten (projektspezifische Quellen ergänzen):
-
-@standard{din18920,
-  title        = {DIN 18920:2026-06, Vegetationstechnik im Landschaftsbau – Schutz von Bäumen, Pflanzenbeständen und Vegetationsflächen bei Baumaßnahmen},
-  organization = {DIN e.V.},
-  publisher    = {DIN Media},
-  year         = {2026},
-}
-
-@book{fll2013,
-  title     = {Baumuntersuchungsrichtlinien: Richtlinien für eingehende Untersuchungen zur Überprüfung der Verkehrssicherheit von Bäumen},
-  editor    = {{ '{{FLL}}' }},
-  publisher = {Forschungsgesellschaft Landschaftsentwicklung Landschaftsbau e.V.},
-  year      = {2013},
-  edition   = {1},
-}
-
-@book{fll2017,
-  title     = {ZTV-Baumpflege: Zusätzliche Technische Vertragsbedingungen und Richtlinien für Baumpflege},
-  editor    = {{ '{{FLL}}' }},
-  publisher = {Forschungsgesellschaft Landschaftsentwicklung Landschaftsbau e.V.},
-  year      = {2017},
-  edition   = {6},
-}
-
-@book{fll2020,
-  title     = {Baumkontrollrichtlinien: Richtlinien für die Baumkontrolle zur Überprüfung der Verkehrssicherheit},
-  editor    = {{ '{{FLL}}' }},
-  publisher = {Forschungsgesellschaft Landschaftsentwicklung Landschaftsbau e.V.},
-  year      = {2020},
-  edition   = {3},
-}
-
-@book{wessolly2014,
-  author    = {Wessolly, Lothar and Erb, Martin},
-  title     = {Handbuch der Baumstatik und Baumkontrolle},
-  publisher = {Patzer Verlag},
-  address   = {Berlin, Hannover},
-  year      = {2014},
-  edition   = {Neuausgabe},
-  isbn      = {978-3-87617-128-9},
-}
-
-@book{roloff2013,
-  editor    = {Roloff, Andreas},
-  title     = {Baumpflege: Baumbiologische Grundlagen und Anwendung},
-  publisher = {Ulmer},
-  year      = {2013},
-  edition   = {2},
-}
-{% endif %}
+%
+% Overlay-Projekte können daneben eine zweite, synchronisierte Korpus-Datei führen;
+% projekteigene Quellen gehören dann trotzdem hierher.

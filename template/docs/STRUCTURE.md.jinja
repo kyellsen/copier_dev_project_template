@@ -24,6 +24,14 @@ you **MUST** adhere to these boundaries.
 **Rule:** Development docs describe *process* (how to commit, how to test, how to release).
 They must **never** paraphrase source code or duplicate information available in `pyproject.toml` or `justfile`.
 
+## 2a. Overlay Documentation (`docs/<overlay>/`)
+
+If an overlay template is applied (expert report, thesis), it owns exactly one
+directory under `docs/` — e.g. `docs/gutachten/` or `docs/thesis/` — holding its
+binding domain rules and its own `AGENTS.md`. Those files are **maintained upstream**
+in the overlay repo and pulled in via `copier update`; edit them there, not here.
+Nothing outside that directory may duplicate their content.
+
 ## 3. Source Code (`src/`)
 
 The code is the **Single Source of Truth** for implementation details.

@@ -128,4 +128,18 @@ Set up an auto-export in Zotero (via the *Better BibTeX* plugin):
 - **Format:** BibLaTeX (Note: Typst is very strict regarding malformed fields like `year`)
 - **Target:** `publication/literature/references.bib`
 - **Option:** "Keep updated"
+
+### Overlay Templates
+
+`publication/` here is the generic skeleton. Expert reports and theses put their
+document layout, chapter structure and domain rules on top as a second copier
+layer with its own answers file:
+
+| Overlay | Repo | Applies |
+|---|---|---|
+| Gutachten | `~/code/reports/gutachten_bausteine` | `copier copy ~/code/reports/gutachten_bausteine .` |
+| Thesis | `~/code/projects/thesis_bausteine` | `copier copy ~/code/projects/thesis_bausteine .` |
+
+The overlay replaces `publication/main.typ` and `publication/config.typ`, adds its
+chapters and drops a `project.just` that this justfile imports automatically.
 {% endif %}

@@ -1,3 +1,0 @@
-nummer,art_deutsch,art_wiss,standort,koordinaten,bezugssystem,flurstueck,eigentuemer,stammumfang_cm,messhoehe_m,hoehe_m,kronendurchmesser_m,kronenansatz_m,entwicklungsphase,vitalitaet,vitalitaet_skala
-1,Stiel-Eiche,Quercus robur,Musterstraße 1 Musterort,"54.00000, 10.00000",WGS84,Flur 0 Flurstück 0,[ERGÄNZEN: Eigentümer],220,1.0,24.0,14.0,6.0,Reifephase,1,Roloff
-2,Winter-Linde,Tilia cordata,Musterstraße 1 Musterort,"54.00001, 10.00001",WGS84,Flur 0 Flurstück 0,[ERGÄNZEN: Eigentümer],180,1.0,21.0,12.0,4.5,Reifephase,2,Roloff
