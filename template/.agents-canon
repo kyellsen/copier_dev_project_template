@@ -1,0 +1,3 @@
+version: v1.0.0
+profiles: 00-core,10-python
+sha256: 3f054ff65564cdb517c50b934bb6b82b751d205135dedc8a2f2739edf3caeae7

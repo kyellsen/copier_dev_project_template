@@ -55,6 +55,14 @@ fix:
     @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
     uv run ruff format .
     uv run ruff check --fix .
+
+# Refresh AGENTS.canon.md from ~/code/_templates/agents_canon
+agents-sync:
+    @~/code/_templates/agents_canon/sync.sh .
+
+# Report whether this repo's canon pin is behind the canon repo
+agents-outdated:
+    @cd ~/code/_templates/agents_canon && just outdated
 {% if include_typst %}
 # === Typst Quality ===
 

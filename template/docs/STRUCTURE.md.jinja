@@ -1,61 +1,50 @@
-# Documentation Structure & DRY Rules
+# Documentation Structure
 
 > **Status:** Normative (Mandatory) · **Scope:** All Contributors & AI Agents
 
-This document dictates the architectural boundaries of all documentation files in this repository.
-To prevent documentation drift and maintain the DRY (Don't Repeat Yourself) principle,
-you **MUST** adhere to these boundaries.
+The file roles, their boundaries and the DRY rules are in the canon —
+**[AGENTS.canon.md](../AGENTS.canon.md)** → "Files and their roles" and
+"Documentation discipline". They are not repeated here.
 
-## 1. Central Documents (Root Level)
+This file says only where documentation goes **in this repository**.
 
-| File | Audience | Purpose | Boundary |
-|---|---|---|---|
-| `README.md` | 👤 Humans | Project overview, quickstart, structure | **Never** contains AI rules or internal conventions |
-| `AGENTS.md` | 🤖 AI Agents | Single source of truth for AI constraints | **Never** duplicates README content |
-{% if include_vision_roadmap %}| `ROADMAP.md` | 👤 + 🤖 | The **When** — milestones, versioning, timing | Does **not** describe architecture |
-| `VISION.md` | 👤 + 🤖 | The **Why** — architecture ideals, endgame goals | Does **not** track release versions |
-{% endif %}
-## 2. Developer Guidelines (`docs/development/`)
+## 1. Developer guidelines (`docs/development/`)
 
 | File | Purpose |
 |---|---|
-| `commit.md` | Conventional Commits standard — **binding** for all contributors and agents |
+| `commit.md` | Project-specific commit scopes, if any. The commit standard itself is in the canon |
 
-**Rule:** Development docs describe *process* (how to commit, how to test, how to release).
-They must **never** paraphrase source code or duplicate information available in `pyproject.toml` or `justfile`.
+Development docs describe *process* — how to commit, how to test, how to
+release. They never paraphrase source code, and never duplicate what
+`pyproject.toml` or the `justfile` already states.
 
-## 2a. Overlay Documentation (`docs/<overlay>/`)
+## 2. Overlay documentation (`docs/<overlay>/`)
 
 If an overlay template is applied (expert report, thesis), it owns exactly one
-directory under `docs/` — e.g. `docs/gutachten/` or `docs/thesis/` — holding its
-binding domain rules and its own `AGENTS.md`. Those files are **maintained upstream**
-in the overlay repo and pulled in via `copier update`; edit them there, not here.
-Nothing outside that directory may duplicate their content.
+directory under `docs/` — for example `docs/gutachten/` or `docs/thesis/` —
+holding its binding domain rules and its own `AGENTS.md`.
 
-## 3. Source Code (`src/`)
+Those files are **maintained upstream** in the overlay repository and pulled in
+via `copier update`; edit them there, not here. Nothing outside that directory
+duplicates their content.
 
-The code is the **Single Source of Truth** for implementation details.
-Documentation must **never** paraphrase what the code already expresses (e.g., function signatures,
-config keys, data schemas). Instead, link to the code or refer to the module by name.
+The nested `AGENTS.md` follows the canon's rule: it may only narrow the root
+`AGENTS.md`, the root file lists it, and it opens with its scope.
 
-## 4. Scripts (`scripts/`)
+## 3. Scripts (`scripts/`)
 
-Lifecycle and build scripts called by `justfile` targets.
-Each script must have a docstring explaining its purpose and which `just` command calls it.
+Lifecycle and build scripts called from `justfile` recipes. Each script carries a
+docstring saying what it does and which `just` command calls it.
 
-## 5. AI & Automation Tooling
+## 4. Agent tooling
 
 | Path | Purpose |
 |---|---|
-| `.agent/workflows/*.md` | Workflow definitions for autonomous AI agents |
-| `AGENTS.md` | Entry point — agents read this first |
+| `AGENTS.md` | Entry point — what applies in this repository |
+| `AGENTS.canon.md` | Generated, byte-identical house rules. Never edited here |
+| `.agent/workflows/*.md` | Workflow definitions for autonomous agents |
 
-**Rule:** Workflow files must **never** write persistent files to the repository.
-Audit reports and plans stay in temporary artifacts or chat output.
+## 5. Generated and scrap material
 
-## 6. General DRY Rules
-
-1. **No content duplication** — link instead of copying.
-2. **Code is SoT** — documentation describes *why* and *how to use*, never paraphrases *what the code does*.
-3. **Scrap notes** — temporary ideas or obsolete notes go to gitignored directories (`.tmp/`, `_workspace/`). Do not bloat the repository with dead notes.
-4. **One owner per topic** — every piece of information has exactly one canonical location. If two files describe the same thing, one must become a link-stub.
+Temporary notes, drafts and one-off audits go to `.tmp/`{% if not workspace_location_external %} or `_workspace/`{% endif %} —
+both gitignored. They never enter the repository.

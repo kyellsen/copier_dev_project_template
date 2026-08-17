@@ -1,101 +1,71 @@
 # AGENTS.md
 
-> **AUTHORITY:** This document is the **single source of truth** for all AI agents
-> working on this repository. Supplementary files (`.gemini/`, `.cursorrules`, `CLAUDE.md`)
-> redirect here — never the reverse.
+Rules that apply in every repository: **[AGENTS.canon.md](AGENTS.canon.md)**
+(generated — change it in `~/code/_templates/agents_canon`, then
+`just agents-sync`). This file holds what applies *here*, plus every deviation
+from the canon with its reason.
 
 👤 **Human?** Read **[README.md](README.md)** for overview and quick start.
 
+**Commit default:** propose — draft the message, Kyell commits. Change this line
+to `execute` once atomic commits should be carried out without review.
 
-## 1. Language & Communication Policy
-- **Repository Content (Code, Commits, Docs):** English
-- **Chat Output (Interaction with User):** German
+## 1. What this project is
 
-## 2. Tech Stack
+{{ description or "TODO: one or two sentences — which question does this repository answer?" }}
 
-| Domain | Use |
+## 2. Stack
+
+The canon defaults apply (`uv`, `hatchling`, `ruff`, `mypy`, `pytest`, `polars`).
+Specific to this project:
+
+| Item | Value |
 |---|---|
-| Runtime | Python {{ python_version }}, `uv` (package manager) |
-| Build | `hatchling` (PEP 517) |
-| Task Runner | `just` (see `justfile`) |
-| Linting | `ruff` (lint + format) |
-| Type Checking | `mypy` (strict mode) |
-| Testing | `pytest` with markers (`unit`, `integration`, `system`) |
-| Config | `python-dotenv` (`.env` files) |
+| Python | {{ python_version }} |
+| Package | `src/{{ python_module_name }}/` |
+| Environment prefix | `{{ python_module_name | upper }}_` |
+{% if include_typst %}| Publication | Typst in `publication/` |
+{% endif %}
 
-## 3. Quality Gates
-
-| Command | Purpose | When |
-|---|---|---|
-| `just lint` | Ruff lint only (fastest feedback) | While coding |
-| `just check` (`c`) | Ruff lint + Mypy type check | Before every commit |
-| `just fix` | Auto-format + lint fix | After `check` finds issues |
-| `just ci` | check + all tests (full pipeline) | Before push / release |
-
-## 4. Testing Rules
-
-1. Every test function **MUST** have exactly one marker: `@pytest.mark.unit`, `.integration`, or `.system`.
-2. Tests live in `tests/unit/`, `tests/integration/`, `tests/system/` — matching their marker.
-3. **Unit:** No I/O, no filesystem, no network. Fast (< 1s/test).
-4. **Integration:** Real filesystem or external data. Self-contained.
-5. **System:** Full pipeline end-to-end.
-
-| Command | Scope |
-|---|---|
-| `just test` | Unit + Integration (daily driver) |
-| `just test-all` | All three tiers |
-| `just test-unit` | Unit only |
-| `just test-int` | Integration only |
-| `just test-system` | System only |
-| `just clean` | Remove caches (`__pycache__`, `.pytest_cache`) |
-| `just distclean` | clean + delete `.venv` |
-| `just nuke` | distclean + workspace + build (Factory Reset) |
-
-## 5. Commit Rules
-
-Follow **[docs/development/commit.md](docs/development/commit.md)** strictly:
-- Conventional Commits format: `<type>(<scope>): <subject>`
-- Types: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`
-- Subject: lowercase, imperative mood, ≤ 72 chars, no period
-- Prefer small, focused commits over large monolithic ones
-
-## 6. Project Structure
+## 3. Project structure
 
 | Path | Purpose |
 |---|---|
 | `src/{{ python_module_name }}/` | Main Python package |
 | `tests/` | Test suite (unit / integration / system) |
-| `scripts/` | Build & lifecycle scripts (Python) |
-| `docs/development/` | Developer guidelines (commit rules) |
-| `justfile` | All developer commands |
+| `scripts/` | Build and lifecycle scripts, called from the `justfile` |
+| `docs/development/` | Developer guidelines |
 | `.env` | Local environment variables (gitignored) |
 {% if include_typst %}| `publication/` | Typst document |
 {% endif %}{% if not workspace_location_external %}| `_workspace/` | Generated data (gitignored, fully regenerable) |
 {% endif %}
 
-🚨 **DATA PIPELINE CONSTRAINT:** **NEVER** copy or download raw experimental data into this repository{% if not workspace_location_external %} or `_workspace/`{% endif %}. Agents MUST read raw data directly from external storage paths defined in `.env`. Generated outputs (Parquet caches, plots) go into the workspace.
-## 7. Environment Variable Naming
+**Data pipeline constraint:** never copy or download raw experimental data into
+this repository{% if not workspace_location_external %} or into `_workspace/`{% endif %}. Read it from the external paths
+declared in `.env`; generated output (Parquet caches, plots) goes to the
+workspace.
 
-All project-specific environment variables **MUST** use the prefix `{{ python_module_name | upper }}_`.
+## 4. Commands beyond the canon verbs
 
-```
-# ✅ Correct
-{{ python_module_name | upper }}_DATA_ROOT=~/data/...
-{{ python_module_name | upper }}_DEBUG=true
+| Command | Scope |
+|---|---|
+| `just test-unit` / `test-int` / `test-system` | one tier each |
+| `just test` | unit + integration (daily driver) |
+| `just test-all` | all three tiers |
+| `just agents-sync` | refresh `AGENTS.canon.md` from the canon repo |
+| `just agents-outdated` | report whether this canon pin is behind |
+{% if include_typst %}| `just publication` | compile the document |
+{% endif %}
 
-# ❌ Wrong — missing prefix
-DATA_ROOT=~/data/...
-DEBUG=true
-```
+## 5. Overlay rules
 
-**Exceptions:** Third-party standards keep their names (e.g., `POSTGRES_USER`, `DOCKER_HOST`).
+This project may carry an overlay layer (expert report, thesis) on top of the
+base scaffold. If `docs/*/AGENTS.md` exists, **read it before touching the
+publication text** — those rules are binding and take precedence over general
+working style. Per the canon's nested-`AGENTS.md` rule they may only narrow what
+is written here and in the canon, never contradict it.
 
-## 8. Overlay Rules
-
-This project may carry an overlay layer (expert report, thesis) on top of the base
-scaffold. If `docs/*/AGENTS.md` exists, **read it before touching the publication
-text** — those rules are binding and take precedence over general working style.
-An overlay also brings its own `project.just` recipes and its own copier answers
+An overlay brings its own `project.just` recipes and its own copier answers
 file; the two layers update separately:
 
 ```bash
@@ -105,5 +75,6 @@ copier update --answers-file .copier-answers.<overlay>.yml
 
 ## See Also
 
-- **[README.md](README.md)** — Project overview, quick start
-- **[docs/development/commit.md](docs/development/commit.md)** — Commit message standard
+- **[README.md](README.md)** — project overview, quick start
+- **[AGENTS.canon.md](AGENTS.canon.md)** — the house rules
+- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** — where documentation belongs
