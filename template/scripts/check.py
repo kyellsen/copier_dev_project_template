@@ -53,37 +53,42 @@ def check_canon() -> None:
 
 
 def check_copier_source() -> None:
-    """Fail if an answers file records a local path as its template source.
+    """Fail if an answers file points at a template directory that is not there.
 
-    `copier copy` burns the source you passed into `_src_path`, and every later
-    `copier update` reads it back from there. A local path ties this project to
-    one machine's directory layout: it aborts with "Local template must be a
-    directory." after any move of the template repo, in a fresh clone and on a
-    second machine -- and it writes a home directory into something delivered.
-    The Git URL costs one 'git push --follow-tags' and nothing else, because
-    `copier update` moves tag to tag either way and never sees uncommitted or
-    untagged template work.
+    `_src_path` records the local path of the template repository, so that a
+    template and a project generated from it can be edited in the same sitting
+    without a `git push` in between. The price of that choice is exactly one
+    failure mode: moving or renaming a template repository breaks every project
+    built from it.
 
-    Skipped outside a git repository: copier refuses there ("Updating is only
-    supported in git-tracked subprojects."), so the recorded source is inert.
-    That is exactly the throwaway `copier copy --vcs-ref HEAD` probe one uses to
-    try a template change that has not earned a tag yet.
+    Checking it here turns that into a named file and a path at gate time,
+    instead of a `Local template must be a directory.` abort weeks later in the
+    middle of a `copier update`. The fix is a `sed` over the answers files.
+
+    Remote sources are left alone -- they are valid, just not the default.
+    Skipped outside a git repository: copier refuses to update there at all, so
+    the recorded source is inert. That is the throwaway `just probe` case.
     """
     if not (PROJECT_ROOT / ".git").exists():
         return
 
     remote_prefixes = ("git@", "git+", "http://", "https://", "ssh://", "gh:", "gl:")
-    offenders = [
-        f"{path.name}: {line.strip()}"
-        for path in sorted(PROJECT_ROOT.glob(".copier-answers*.yml"))
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.startswith("_src_path:")
-        and not line.removeprefix("_src_path:").strip().startswith(remote_prefixes)
-    ]
-    if offenders:
-        print("local template source -- point _src_path at the Git URL:")
-        for offender in offenders:
-            print(f"  {offender}")
+    missing = []
+    for path in sorted(PROJECT_ROOT.glob(".copier-answers*.yml")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("_src_path:"):
+                continue
+            src = line.removeprefix("_src_path:").strip()
+            if src.startswith(remote_prefixes):
+                continue
+            if not Path(src).expanduser().is_dir():
+                missing.append(f"{path.name}: {src}")
+
+    if missing:
+        print("template source is gone -- the repository moved or was renamed:")
+        for entry in missing:
+            print(f"  {entry}")
+        print("  fix: sed -i 's|<old>|<new>|' .copier-answers*.yml")
         sys.exit(1)
 
 
