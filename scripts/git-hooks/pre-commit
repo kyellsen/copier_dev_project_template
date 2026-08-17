@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Runs this repository's quality gate before every commit.
+#
+# Versioned here instead of in .git/hooks so it survives a fresh clone;
+# 'just install-hooks' points core.hooksPath at this directory.
+#
+# What "green" means is deliberately NOT defined here — 'just check' owns that,
+# and it is the same command a human runs. New checks go into the justfile.
+#
+# Nothing is stashed, so the gate judges the working tree: what you see is what
+# is tested. That is the opposite of the pre-commit framework, whose red hook is
+# only a suspicion because it hides unstaged work.
+#
+# The PATH line is not optional on this machine. Git runs hooks from a
+# non-login shell, and just, uv, copier and typst all live under the Homebrew
+# tree — without it every commit fails with "just: command not found".
+set -euo pipefail
+export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+
+cd "$(git rev-parse --show-toplevel)"
+exec just check

@@ -4,6 +4,13 @@
 default:
     @just --list --unsorted
 
+# === Setup ===
+
+# Wire the versioned pre-commit hook into this clone
+install-hooks:
+    git config core.hooksPath scripts/git-hooks
+    @echo "✅ core.hooksPath → scripts/git-hooks"
+
 # === House rules ===
 
 # Refresh both AGENTS.canon.md copies from ~/code/_templates/agents_canon
