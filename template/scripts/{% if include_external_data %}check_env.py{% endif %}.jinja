@@ -23,11 +23,15 @@ if env_example.exists():
             required_vars.append(var_name)
 else:
     # Fallback to known variables if .env.example is missing
-    required_vars = [
+{#- Both branches are written out. A single loop would render an empty list as
+    '[' and ']' on two lines, which is valid Python that ruff format rejects —
+    and that is what made every generated project red on its own gate. #}
+{% if include_typst or workspace_location_external %}    required_vars = [
 {% if include_typst %}        "{{ python_module_name | upper }}_RAW_ASSETS_DIR",
 {% endif %}{% if workspace_location_external %}        "WORKSPACE_ROOT",
 {% endif %}    ]
-
+{% else %}    required_vars = []
+{% endif %}
 for var in required_vars:
     val = os.environ.get(var)
     if not val:
