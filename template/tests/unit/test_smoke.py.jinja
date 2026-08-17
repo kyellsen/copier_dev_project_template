@@ -1,6 +1,11 @@
 import pytest
 
+
 @pytest.mark.unit
 def test_import_package() -> None:
     """Smoke test to ensure the package is importable and pytest doesn't fail with exit code 5."""
-    import {{ python_module_name }}
+    import {{ python_module_name }} as pkg
+
+    # Asserting on the import keeps it used: a bare `import` is dead code to
+    # ruff (F401), and `ruff check --fix` would silently empty this test.
+    assert pkg.__name__ == "{{ python_module_name }}"

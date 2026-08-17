@@ -80,6 +80,7 @@ from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("BA_KS_STUTTGART_ROOT", "")) / "data" / "raw" / "..."
 
+
 def _skip_if_no_data(directory: Path) -> Path:
     if not directory.is_dir():
         pytest.skip(f"Data not available: {directory}")
@@ -111,6 +112,7 @@ that our binary parsers produce identical results to the vendor software exports
 @pytest.mark.integration
 def test_tsw_parser_matches_vendor_csv():
     """TMS-1: Parse .tsw, compare row-by-row against vendor CSV export."""
+
 
 @pytest.mark.integration
 def test_twsb_parser_matches_vendor_csv():

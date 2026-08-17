@@ -1,19 +1,19 @@
 """Builds a compressed photo cache from the RAW_ASSETS_DIR.
 
-Reads JPG/JPEG/PNG/WEBP images and NEF (Nikon RAW) files from the configured 
-RAW_ASSETS_DIR, downscales them to publication quality, and writes the results 
+Reads JPG/JPEG/PNG/WEBP images and NEF (Nikon RAW) files from the configured
+RAW_ASSETS_DIR, downscales them to publication quality, and writes the results
 to _workspace/output/assets/, preserving the original subdirectory structure.
 
 NEF files are decoded with automatic white balance and exposure correction
 via `rawpy` (LibRaw) if installed. All outputs are JPEG, optimized for PDF embedding.
 
-Fast change detection (mtime + size) ensures idempotent runs — only new 
+Fast change detection (mtime + size) ensures idempotent runs — only new
 or changed source files are reprocessed.
 """
 
 import json
-import os
 import multiprocessing
+import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
@@ -128,7 +128,7 @@ def main() -> None:
         multiprocessing.set_start_method("spawn", force=True)
 
     if not RAW_IMAGES_DIR or not RAW_IMAGES_DIR.exists():
-        print(f"Info: Source directory for assets does not exist or is not configured.")
+        print("Info: Source directory for assets does not exist or is not configured.")
         print(f"  Please set {env_var_name} in your .env file!")
         if RAW_IMAGES_DIR:
             print(f"  Current value: {RAW_IMAGES_DIR}")
@@ -155,7 +155,7 @@ def main() -> None:
         return
 
     print(f"📷 Found {len(image_files)} images in {RAW_IMAGES_DIR}")
-    
+
     total_processed = 0
     tasks = []
 
@@ -174,7 +174,7 @@ def main() -> None:
             and cached.get("size") == meta["size"]
         ):
             continue  # Up-to-date
-            
+
         tasks.append((img_path, dest_path, meta, file_key))
 
     # Process new/changed files in parallel using all CPU cores
@@ -182,9 +182,7 @@ def main() -> None:
         cores = multiprocessing.cpu_count()
         print(f"  → Processing {len(tasks)} files using {cores} CPU cores...")
         with ProcessPoolExecutor(max_workers=cores) as executor:
-            futures = [
-                executor.submit(process_image_task, *task) for task in tasks
-            ]
+            futures = [executor.submit(process_image_task, *task) for task in tasks]
             for future in as_completed(futures):
                 success, file_key, meta_result = future.result()
                 if success and meta_result is not None:
@@ -200,6 +198,7 @@ def main() -> None:
     print(f"\n✓ prepare-assets done: {total_processed} new/updated, {total_skipped} cached")
     if total_processed > 0:
         print("  Use 'just add-asset <path/to/file.jpg>' to add specific assets to publication.")
+
 
 if __name__ == "__main__":
     main()

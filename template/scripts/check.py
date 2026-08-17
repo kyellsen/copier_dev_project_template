@@ -11,7 +11,15 @@ from pipeline import run_pipeline
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC = PROJECT_ROOT / "src"
 
-ALWAYS_RUN_STAGES: set[str] = {"Ruff Lint", "Mypy", "Canon Integrity"}
+# Stages that record a failure but do not abort the run, so their siblings still
+# report. "Ruff Format Check" belongs here: it is the most trivial check in the
+# gate, and aborting on it hides the lint and type errors one actually needs.
+ALWAYS_RUN_STAGES: set[str] = {
+    "Ruff Format Check",
+    "Ruff Lint",
+    "Mypy",
+    "Canon Integrity",
+}
 
 
 def check_canon() -> None:
@@ -43,9 +51,7 @@ def check_canon() -> None:
         sys.exit(1)
 
 
-def make_cmd_runner(
-    cmd: list[str], allowed_codes: set[int] | None = None
-) -> Callable[[], None]:
+def make_cmd_runner(cmd: list[str], allowed_codes: set[int] | None = None) -> Callable[[], None]:
     """Create a runner function for simple subprocess commands."""
     if allowed_codes is None:
         allowed_codes = {0}
@@ -61,7 +67,7 @@ def make_cmd_runner(
 def main() -> None:
     is_ci = "--ci" in sys.argv
 
-    all_stages: list[tuple[str, Callable[[], None | int]]] = [
+    all_stages: list[tuple[str, Callable[[], int | None]]] = [
         ("Canon Integrity", check_canon),
         ("Lock-File Check", make_cmd_runner(["uv", "lock", "--check"])),
         (

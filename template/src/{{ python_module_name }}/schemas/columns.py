@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from pydantic import BaseModel, Field
 
 _GREEK_LETTERS = (

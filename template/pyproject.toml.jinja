@@ -29,7 +29,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.9",
+    # Pinned to a minor range on purpose: `ruff format` output changes between
+    # minor releases, and this template ships pre-formatted files. An open upper
+    # bound would turn every generated project red on the next ruff release.
+    "ruff>=0.16,<0.17",
     "mypy>=1.14",
     "pytest>=8.0",
     "jupyterlab>=4.3",
@@ -45,6 +48,10 @@ build-backend = "hatchling.build"
 line-length = 100
 target-version = "py{{ python_version | replace('.', '') }}"
 src = ["src", "tests", "scripts"]
+# ruff formats Python code blocks inside Markdown. AGENTS.canon.md is generated
+# and hash-gated by the Canon Integrity stage, so it must never be reformatted —
+# the two gates would contradict each other and no edit could satisfy both.
+extend-exclude = ["AGENTS.canon.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4", "PTH", "RUF"]

@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-import {{ python_module_name }}
+import {{ python_module_name }} as pkg
 from {{ python_module_name }}.schemas.columns import ColumnDef
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -29,9 +29,7 @@ def _discover_column_groups() -> list[tuple[ColumnDef, ...]]:
     groups: list[tuple[ColumnDef, ...]] = []
 
     try:
-        for module_info in pkgutil.walk_packages(
-            {{ python_module_name }}.__path__, {{ python_module_name }}.__name__ + "."
-        ):
+        for module_info in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + "."):
             if "schema" in module_info.name:
                 mod = importlib.import_module(module_info.name)
                 for attr_name in dir(mod):
@@ -170,7 +168,7 @@ def _filter_used_symbols(
 def main() -> None:
     groups = _discover_column_groups()
     if not groups:
-        print("ℹ️ No schema column groups found in {{ python_module_name }}.schemas.")
+        print(f"⚠️  No schema column groups found in {pkg.__name__}.schemas.")
         return
 
     unique = _collect_unique_symbols(groups)

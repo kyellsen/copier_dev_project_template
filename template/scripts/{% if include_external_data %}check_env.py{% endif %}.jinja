@@ -35,9 +35,8 @@ for var in required_vars:
         continue
 
     # If the variable looks like a directory path, verify it exists
-    if var.endswith("_DIR") or var.endswith("_ROOT"):
-        if not Path(val).is_dir():
-            errors.append(f"✗ {var} is not reachable or not a directory: {val}")
+    if var.endswith(("_DIR", "_ROOT")) and not Path(val).is_dir():
+        errors.append(f"✗ {var} is not reachable or not a directory: {val}")
 
 if errors:
     print("\n".join(errors))
