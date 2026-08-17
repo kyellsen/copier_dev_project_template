@@ -1,5 +1,5 @@
 // 04_ergebnisse.typ — rein beschreibend; Bewertung erst in 05_schlussfolgerungen
-#import "@local/gutachten-bausteine:0.1.0": baumkataster-tabelle, baum-abschnitte, artenschutz-pruefung
+#import "@local/gutachten-bausteine:0.2.0": baumkataster-tabelle, baum-abschnitte, artenschutz-pruefung
 
 = Ergebnisse
 

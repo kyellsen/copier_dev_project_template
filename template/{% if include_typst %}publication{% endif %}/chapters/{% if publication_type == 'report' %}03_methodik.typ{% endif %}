@@ -1,6 +1,6 @@
 // 03_methodik.typ — Methodik; Standardtexte kommen versioniert aus dem Bausteinpaket
 // (Repo: ~/code/reports/gutachten_bausteine — dort `just install` ausführen)
-#import "@local/gutachten-bausteine:0.1.0": begriffsdefinitionen, methodik-inaugenscheinnahme
+#import "@local/gutachten-bausteine:0.2.0": begriffsdefinitionen, methodik-inaugenscheinnahme
 
 = Methodik
 
