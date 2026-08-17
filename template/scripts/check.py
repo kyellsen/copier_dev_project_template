@@ -19,6 +19,7 @@ ALWAYS_RUN_STAGES: set[str] = {
     "Ruff Lint",
     "Mypy",
     "Canon Integrity",
+    "Copier Source",
 }
 
 
@@ -51,6 +52,41 @@ def check_canon() -> None:
         sys.exit(1)
 
 
+def check_copier_source() -> None:
+    """Fail if an answers file records a local path as its template source.
+
+    `copier copy` burns the source you passed into `_src_path`, and every later
+    `copier update` reads it back from there. A local path ties this project to
+    one machine's directory layout: it aborts with "Local template must be a
+    directory." after any move of the template repo, in a fresh clone and on a
+    second machine -- and it writes a home directory into something delivered.
+    The Git URL costs one 'git push --follow-tags' and nothing else, because
+    `copier update` moves tag to tag either way and never sees uncommitted or
+    untagged template work.
+
+    Skipped outside a git repository: copier refuses there ("Updating is only
+    supported in git-tracked subprojects."), so the recorded source is inert.
+    That is exactly the throwaway `copier copy --vcs-ref HEAD` probe one uses to
+    try a template change that has not earned a tag yet.
+    """
+    if not (PROJECT_ROOT / ".git").exists():
+        return
+
+    remote_prefixes = ("git@", "git+", "http://", "https://", "ssh://", "gh:", "gl:")
+    offenders = [
+        f"{path.name}: {line.strip()}"
+        for path in sorted(PROJECT_ROOT.glob(".copier-answers*.yml"))
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.startswith("_src_path:")
+        and not line.removeprefix("_src_path:").strip().startswith(remote_prefixes)
+    ]
+    if offenders:
+        print("local template source -- point _src_path at the Git URL:")
+        for offender in offenders:
+            print(f"  {offender}")
+        sys.exit(1)
+
+
 def make_cmd_runner(cmd: list[str], allowed_codes: set[int] | None = None) -> Callable[[], None]:
     """Create a runner function for simple subprocess commands."""
     if allowed_codes is None:
@@ -69,6 +105,7 @@ def main() -> None:
 
     all_stages: list[tuple[str, Callable[[], int | None]]] = [
         ("Canon Integrity", check_canon),
+        ("Copier Source", check_copier_source),
         ("Lock-File Check", make_cmd_runner(["uv", "lock", "--check"])),
         (
             "Ruff Format Check",
