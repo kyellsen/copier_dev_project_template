@@ -40,8 +40,8 @@ author_email:
 # Generic publication layer: directory skeleton, build tooling and a minimal
 # Typst document. Report and thesis specifics are their own overlay templates,
 # applied on top of a project generated from here:
-#   ~/code/reports/gutachten_bausteine   (Gutachten)
-#   ~/code/projects/thesis_bausteine     (Thesis)
+#   ~/code/_templates/gutachten_bausteine   (Gutachten)
+#   ~/code/_templates/thesis_bausteine     (Thesis)
 # Each overlay keeps its own answers file, so both layers update independently.
 include_typst:
   type: bool
