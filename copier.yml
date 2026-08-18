@@ -43,10 +43,16 @@ author_email:
 #   ~/code/_templates/gutachten_bausteine   (Gutachten)
 #   ~/code/_templates/thesis_bausteine     (Thesis)
 # Each overlay keeps its own answers file, so both layers update independently.
+# Default true: both overlays above write publication/main.typ unconditionally,
+# and that imports publication/lib/data.typ, which only this layer provides.
+# Answering no here and applying an overlay anyway yields a project that fails
+# to compile with "file not found: lib/data.typ" — so the overlays check for it
+# in their own `scaffold` and `check-bausteine`. A pure code project without a
+# document costs one keystroke; the reverse costs a puzzling Typst error.
 include_typst:
   type: bool
-  help: "Include Typst publication setup directory?"
-  default: false
+  help: "Include Typst publication setup directory? (required by the report and thesis overlays)"
+  default: true
 
 include_external_data:
   type: bool
