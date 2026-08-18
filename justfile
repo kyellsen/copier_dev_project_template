@@ -16,13 +16,13 @@ install-hooks:
 
 # Refresh both AGENTS.canon.md copies from ~/code/_templates/agents_canon
 [group('plumbing')]
-agents-sync:
+canon-pull:
     @~/code/_templates/agents_canon/sync.sh .
     @~/code/_templates/agents_canon/sync.sh template
 
 # Report whether this repo's canon pins are behind the canon repo
 [group('plumbing')]
-agents-outdated:
+canon-outdated:
     @cd ~/code/_templates/agents_canon && just outdated
 
 # === Quality ===
@@ -43,7 +43,7 @@ check-canon:
       have=$(sha256sum "$dir/AGENTS.canon.md" | cut -c1-64)
       want=$(sed -n 's/^sha256: //p' "$dir/.agents-canon")
       test "$have" = "$want" \
-        || { echo "❌ $dir/AGENTS.canon.md was edited by hand — run 'just agents-sync' or restore it"; exit 1; }
+        || { echo "❌ $dir/AGENTS.canon.md was edited by hand — run 'just canon-pull' or restore it"; exit 1; }
     done
     echo "✅ canon integrity — $(sed -n 's/^version: //p' .agents-canon)"
 

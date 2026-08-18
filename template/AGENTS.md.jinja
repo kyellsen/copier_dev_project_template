@@ -2,7 +2,7 @@
 
 Rules that apply in every repository: **[AGENTS.canon.md](AGENTS.canon.md)**
 (generated — change it in `~/code/_templates/agents_canon`, then
-`just agents-sync`). This file holds what applies *here*, plus every deviation
+`just canon-pull`). This file holds what applies *here*, plus every deviation
 from the canon with its reason.
 
 👤 **Human?** Read **[README.md](README.md)** for overview and quick start.
@@ -52,8 +52,8 @@ workspace.
 | `just test-unit` / `test-int` / `test-system` | one tier each |
 | `just test` | unit + integration (daily driver) |
 | `just test-all` | all three tiers |
-| `just agents-sync` | refresh `AGENTS.canon.md` from the canon repo |
-| `just agents-outdated` | report whether this canon pin is behind |
+| `just canon-pull` | refresh `AGENTS.canon.md` from the canon repo |
+| `just canon-outdated` | report whether this canon pin is behind |
 {% if include_typst %}| `just publication` | compile the document |
 {% endif %}
 

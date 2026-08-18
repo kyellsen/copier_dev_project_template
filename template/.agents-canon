@@ -1,3 +1,3 @@
-version: v1.6.0
+version: v1.7.0
 profiles: 00-core,10-python
-sha256: 0cd9f8db46cc6e37955259cfb037503180767ee6204c7979e270101f269fdfed
+sha256: 09d82abfb06a272d0dff6998c8e04b51705d24caf3dae045f3123a9ca47c2dca
