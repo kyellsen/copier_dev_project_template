@@ -89,3 +89,10 @@ probe target="/tmp/probe-dev-project":
     rm -rf "{{ target }}"
     uv run --no-project --with copier copier copy --vcs-ref HEAD "$(pwd)" "{{ target }}"
     @echo "✅ probe in {{ target }} — throwaway, never 'copier update' from an untagged state"
+
+# There is no tier beyond the gate here: check-render already generates a real
+# project from the working tree, which is this repository's only real test.
+
+# The CI entry point — same gate as 'check'
+[group('plumbing')]
+ci: check
