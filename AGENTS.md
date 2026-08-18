@@ -58,6 +58,28 @@ Raising the pinned canon version is a deliberate act: `agents_canon/sync.sh
 template` and then a commit that says which version. It does not make any
 existing project red — a consumer's gate checks its own local pin.
 
+## Where a gate belongs
+
+`include_precommit` is not a taste question. It decides whether a generated
+project commits behind a gate, and the answer differs by what the repository
+produces:
+
+| Repository produces | `include_precommit` | Why |
+|---|---|---|
+| **Code** (a library, a pipeline, an app) | `true` | A broken commit is a broken artefact. The gate is fast and judges exactly what the next person will run. |
+| **Text** (a report, a thesis) | `false` | The deliverable is a PDF, and the gate would check Python nobody touched. What protects the document is `just pub-watch` while writing — a compile error surfaces in a second — and `just deliver` / `just submit`, which refuse a dirty tree and compile fresh. A commit there is a save point, not a publication. |
+
+Blocking a save point over a transient state teaches exactly one habit,
+`--no-verify`, and that voids the gate everywhere. It has already happened once
+in `ba_ks`.
+
+When it is `true`, the hook is **versioned** in `scripts/git-hooks` and wired in
+with `core.hooksPath` — not the `pre-commit` framework. The framework stashes
+unstaged work before running, so its verdict describes a tree that never existed;
+the versioned hook judges the working tree as it is. That is also why the
+generated project no longer carries a `pre-commit` dependency at all: the hook
+is nine lines of bash.
+
 ## Verifying a change
 
 The template has no tests, because the thing that can break is the render. So

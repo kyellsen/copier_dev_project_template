@@ -29,18 +29,26 @@ setup:
 {% if include_precommit %}    @just install-hooks
 {% endif %}
 {% if include_precommit %}
-# === Git Hooks (pre-commit framework) ===
+# === Git Hooks ===
 
-# Wire the git hooks into this clone (setup does it too)
+# The hook is versioned in scripts/git-hooks and wired in with core.hooksPath,
+# so it survives a fresh clone and is reviewed like any other file. It runs
+# 'just check' — the same command you run — and stashes nothing: the gate judges
+# the working tree, so what you see is what is tested. The pre-commit framework
+# does the opposite; its red hook is only a suspicion because it hides unstaged
+# work, and the honest reaction to that is --no-verify, which voids the gate.
+
+# Wire the versioned git hook into this clone (setup does it too)
 [group('setup')]
 install-hooks:
-    @echo "\033[1m\033[96mInstalling Git hooks (pre-commit)\033[0m"
-    uv run pre-commit install --hook-type pre-commit --hook-type pre-push
+    git config core.hooksPath scripts/git-hooks
+    @echo "✅ core.hooksPath → scripts/git-hooks"
 
-# Remove the git hooks from this clone
+# Remove the git hook from this clone
 [group('setup')]
 uninstall-hooks:
-    uv run pre-commit uninstall --hook-type pre-commit --hook-type pre-push
+    git config --unset core.hooksPath || true
+    @echo "✅ core.hooksPath unset"
 {% endif %}
 {% if include_external_data %}
 # === Environment Check ===

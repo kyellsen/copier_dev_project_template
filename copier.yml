@@ -74,9 +74,12 @@ include_license:
   help: "Include LICENSE placeholder file?"
   default: false
 
+# Code repositories: yes. Writing repositories (a report, a thesis): no --
+# there the gate belongs at 'just pub-watch' while writing and at delivery,
+# not at every save point. See AGENTS.md, "Where a gate belongs".
 include_precommit:
   type: bool
-  help: "Include local pre-commit hooks delegating to just/uv?"
+  help: "Install a versioned pre-commit hook running 'just check'? (code repos: yes, writing repos: no)"
   default: false
 
 include_github_actions:
