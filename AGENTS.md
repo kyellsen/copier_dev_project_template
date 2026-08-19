@@ -50,13 +50,25 @@ independently.
 
 ## Canon in every generated project
 
-`template/AGENTS.canon.md` and `template/.agents-canon` are shipped with the
-scaffold, and `template/scripts/check.py` has a `Canon Integrity` stage. That is
-how a project is self-contained from birth rather than depending on `~/.config`.
+**This template no longer ships `AGENTS.canon.md` or `.agents-canon`.** A
+generated project fetches them itself — `just setup` runs `canon-pull`, and so
+can you at any time.
 
-Raising the pinned canon version is a deliberate act: `agents_canon/sync.sh
-template` and then a commit that says which version. It does not make any
-existing project red — a consumer's gate checks its own local pin.
+That is not tidiness, it is the house rule: nothing writes into another
+repository. Shipping the canon meant this template carried a second copy with
+*its own* profile list, and every later `copier update` offered that copy to the
+project. On 2026-08-18 an update to a report would have silently replaced
+`00-core,10-python,40-science` with the template's `00-core,10-python` and
+dropped the science profile — a file the project's own gate then reports as
+hand-edited, with no hint where the change came from.
+
+The `canon_profiles` answer **only bootstraps the first pull**. Once
+`.agents-canon` exists it is authoritative, so a project can add a profile by
+editing that file and running `canon-pull`; a stale copier answer can never
+narrow it back. The recipe says so at the point of use.
+
+A project between generation and its first pull is a normal state: the gate's
+canon stage returns early when `AGENTS.canon.md` is absent.
 
 ## Where a gate belongs
 

@@ -14,13 +14,12 @@ install-hooks:
 
 # === House rules ===
 
-# Refresh both AGENTS.canon.md copies from ~/code/_templates/agents_canon
+# Refresh AGENTS.canon.md from ~/code/_templates/agents_canon
 [group('plumbing')]
 canon-pull:
     @~/code/_templates/agents_canon/sync.sh .
-    @~/code/_templates/agents_canon/sync.sh template
 
-# Report whether this repo's canon pins are behind the canon repo
+# Report whether this repo's canon pin is behind the canon repo
 [group('plumbing')]
 canon-outdated:
     @cd ~/code/_templates/agents_canon && just outdated
@@ -38,13 +37,13 @@ check: check-canon check-render
 check-canon:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Two copies live here: this repo's own, and the one shipped into projects.
-    for dir in . template; do
-      have=$(sha256sum "$dir/AGENTS.canon.md" | cut -c1-64)
-      want=$(sed -n 's/^sha256: //p' "$dir/.agents-canon")
-      test "$have" = "$want" \
-        || { echo "❌ $dir/AGENTS.canon.md was edited by hand — run 'just canon-pull' or restore it"; exit 1; }
-    done
+    # One copy, this repo's own. The template used to carry a second one and
+    # ship it into every generated project — see AGENTS.md, "Canon in every
+    # generated project", for why that had to go.
+    have=$(sha256sum AGENTS.canon.md | cut -c1-64)
+    want=$(sed -n 's/^sha256: //p' .agents-canon)
+    test "$have" = "$want" \
+      || { echo "❌ AGENTS.canon.md was edited by hand — run 'just canon-pull' or restore it"; exit 1; }
     echo "✅ canon integrity — $(sed -n 's/^version: //p' .agents-canon)"
 
 # Render into a throwaway project and check it came out whole
@@ -70,10 +69,14 @@ check-render:
       exit 1
     fi
 
-    # The shipped canon must survive templating with its pin intact.
-    have=$(sha256sum "$OUT/AGENTS.canon.md" | cut -c1-64)
-    want=$(sed -n 's/^sha256: //p' "$OUT/.agents-canon")
-    test "$have" = "$want" || { echo "❌ the generated project's canon pin does not match its file"; exit 1; }
+    # The opposite of what this used to assert: a generated project must arrive
+    # WITHOUT a canon, and fetch it itself. Shipping one meant this template
+    # carried a second copy with its own profile list and pushed it into every
+    # project on update. See AGENTS.md, "Canon in every generated project".
+    for f in AGENTS.canon.md .agents-canon; do
+      test ! -e "$OUT/$f" || { echo "❌ the template still ships $f — projects must pull it themselves"; exit 1; }
+    done
+    grep -q 'canon-pull' "$OUT/justfile" || { echo "❌ the generated project has no canon-pull recipe"; exit 1; }
 
     # A justfile broken by Jinja fails here and nowhere else until someone uses it.
     just --justfile "$OUT/justfile" --working-directory "$OUT" --list >/dev/null
@@ -81,7 +84,7 @@ check-render:
     # Same for the Python that came out of .jinja templates.
     uv run --no-project python -m compileall -q "$OUT/src" "$OUT/scripts" >/dev/null
 
-    echo "✅ template renders: canon pin intact, justfile parses, generated Python compiles"
+    echo "✅ template renders: no canon shipped, canon-pull present, justfile parses, generated Python compiles"
 
 # Generate a throwaway project and keep it, for looking at the result by hand
 [group('daily')]

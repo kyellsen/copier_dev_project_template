@@ -74,6 +74,14 @@ include_license:
   help: "Include LICENSE placeholder file?"
   default: false
 
+# Which canon profiles this project carries. Only used to bootstrap: once
+# .agents-canon exists it is authoritative, so changing profiles later is an
+# edit there plus 'just canon-pull', not a copier update.
+canon_profiles:
+  type: str
+  help: "Canon profiles (00-core is for everyone; add 10-python, 20-web, 30-ansible, 40-science)"
+  default: "00-core,10-python"
+
 # Code repositories: yes. Writing repositories (a report, a thesis): no --
 # there the gate belongs at 'just pub-watch' while writing and at delivery,
 # not at every save point. See AGENTS.md, "Where a gate belongs".

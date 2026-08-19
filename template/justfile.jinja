@@ -26,6 +26,7 @@ alias s := setup
 [group('setup')]
 setup:
     uv run python scripts/setup.py
+    @just canon-pull
 {% if include_precommit %}    @just install-hooks
 {% endif %}
 {% if include_precommit %}
@@ -82,7 +83,18 @@ fix:
 # Refresh AGENTS.canon.md from ~/code/_templates/agents_canon
 [group('setup')]
 canon-pull:
-    @~/code/_templates/agents_canon/sync.sh .
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # .agents-canon wins once it exists. The copier answer only bootstraps the
+    # first pull: a project may add a profile later by editing that file, and a
+    # stale answer must never silently narrow it back. That exact near-miss
+    # happened on 2026-08-18, when the base template still shipped its own
+    # AGENTS.canon.md and an update offered to drop 40-science from a report.
+    if [ -f .agents-canon ]; then
+        ~/code/_templates/agents_canon/sync.sh .
+    else
+        ~/code/_templates/agents_canon/sync.sh . "{{ canon_profiles }}"
+    fi
 
 # Report whether this repo's canon pin is behind the canon repo
 [group('setup')]
