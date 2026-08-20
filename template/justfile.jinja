@@ -194,10 +194,10 @@ publication:
 alias pw := publication-watch
 alias pub-watch := publication-watch
 
-# Compile, open in Okular, then recompile on every save
+# Compile, open the PDF viewer, then recompile on every save
 [group('daily')]
 publication-watch:
-    cd publication && typst compile main.typ && (okular main.pdf > /dev/null 2>&1 &) && typst watch main.typ
+    uv run python scripts/publication_watch.py
 
 alias export := export-pdf
 

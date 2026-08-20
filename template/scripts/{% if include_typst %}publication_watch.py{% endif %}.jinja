@@ -1,0 +1,79 @@
+"""Compile publication/main.typ, open the PDF viewer, and watch for changes.
+
+Called by: just publication-watch
+
+The viewer is resolved, never assumed. On an Atomic desktop Okular ships as a
+Flatpak and there is no `okular` on PATH, so a plain `okular main.pdf &` with
+its output on /dev/null fails invisibly: backgrounding always succeeds, the
+watcher starts anyway, and the document recompiles forever without a window.
+"""
+
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from common import print_error, print_step, print_success
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PUBLICATION_DIR = PROJECT_ROOT / "publication"
+MAIN_TYP = PUBLICATION_DIR / "main.typ"
+MAIN_PDF = PUBLICATION_DIR / "main.pdf"
+
+
+def find_pdf_viewer() -> list[str]:
+    """Return the command for the best available PDF viewer, empty if there is none."""
+    if shutil.which("okular"):
+        return ["okular"]
+
+    # Guarded: without the guard this raises FileNotFoundError on a host that
+    # has no flatpak at all, instead of falling through to xdg-open.
+    if shutil.which("flatpak"):
+        probe = subprocess.run(
+            ["flatpak", "info", "org.kde.okular"],
+            capture_output=True,
+            check=False,
+        )
+        if probe.returncode == 0:
+            return ["flatpak", "run", "org.kde.okular"]
+
+    if shutil.which("xdg-open"):
+        return ["xdg-open"]
+
+    return []
+
+
+def main() -> None:
+    """Compile once, open the viewer, then watch until interrupted."""
+    if not MAIN_TYP.exists():
+        print_error(f"Source not found: {MAIN_TYP}")
+        sys.exit(1)
+
+    print_step("Compiling publication...")
+    compiled = subprocess.run(["typst", "compile", "main.typ"], cwd=PUBLICATION_DIR, check=False)
+    if compiled.returncode != 0:
+        print_error("Typst compilation failed.")
+        sys.exit(1)
+    print_success("Compiled main.pdf")
+
+    viewer_cmd = find_pdf_viewer()
+    if viewer_cmd:
+        print_step(f"Opening viewer: {' '.join(viewer_cmd)}")
+        subprocess.Popen(
+            [*viewer_cmd, str(MAIN_PDF)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    else:
+        print_step("No PDF viewer found — open publication/main.pdf yourself.")
+
+    print_step("Starting Typst watch mode (Ctrl+C to stop)...")
+    try:
+        subprocess.run(["typst", "watch", "main.typ"], cwd=PUBLICATION_DIR, check=False)
+    except KeyboardInterrupt:
+        print()
+        print_success("Watch mode stopped.")
+
+
+if __name__ == "__main__":
+    main()
