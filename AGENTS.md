@@ -70,6 +70,27 @@ narrow it back. The recipe says so at the point of use.
 A project between generation and its first pull is a normal state: the gate's
 canon stage returns early when `AGENTS.canon.md` is absent.
 
+## `project_kind` — what the repository produces
+
+**Ask the distinction once, derive the flags from it.** `code`, `report` or
+`thesis`; the two writing values name the overlay that follows
+(`gutachten_bausteine`, `thesis_bausteine`).
+
+**Why:** the code-vs-text split decides several flags, and asking it one flag at
+a time invites a project that answers itself inconsistently — a Gutachten that
+carries VISION.md because the question defaulted to yes and nobody thought about
+it. That happened, and the files were deleted by hand afterwards.
+
+Today only `include_vision_roadmap` derives from it: planning files are a
+software project's, a report's goal stands in the commission and its date in the
+deadline. For `report` and `thesis` the question is not asked at all, because a
+"no" that has to be remembered every time is a "yes" waiting to happen. The
+canon lists both files as optional, so a repository without them is in order.
+
+`include_precommit` below is the obvious next candidate — its table says the
+same thing in prose — but it stays a real question for now: a code repository
+without a gate is a deliberate choice often enough to be worth the keystroke.
+
 ## Where a gate belongs
 
 `include_precommit` is not a taste question. It decides whether a generated

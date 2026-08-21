@@ -35,6 +35,23 @@ author_email:
   default: "mail@kyelljensen.de"
   when: false
 
+# --- What kind of repository is this ---
+
+# The base layer already knows that two writing overlays are built on top of it
+# (see include_typst below), so it can ask once what is being built instead of
+# asking that same distinction one flag at a time. Only include_vision_roadmap
+# hangs off it today; the obvious next candidate is include_precommit, whose
+# help text spells out the identical code-vs-text split by hand — see AGENTS.md,
+# "Where a gate belongs".
+project_kind:
+  type: str
+  help: "What does this repository produce?"
+  choices:
+    "Code — a library, a pipeline, an app": "code"
+    "Report — a Gutachten (gutachten_bausteine overlay follows)": "report"
+    "Thesis — a thesis (thesis_bausteine overlay follows)": "thesis"
+  default: "code"
+
 # --- Optional Modules ---
 
 # Generic publication layer: directory skeleton, build tooling and a minimal
@@ -64,10 +81,19 @@ workspace_location_external:
   help: "Store generated intermediate data (Parquet, plots) outside the repo via WORKSPACE_ROOT in .env? (false = internal _workspace/)"
   default: false
 
+# Planning files of a software project: VISION.md carries the why (goal, north
+# star), ROADMAP.md the when (milestones). A report and a thesis have neither —
+# their goal stands in the commission, their date in the deadline, and both
+# belong in the file, not in the repository. So the question is not asked there
+# at all: offering planning files to a Gutachten is the question the wrong way
+# round, and a "no" that has to be remembered every time is a "yes" waiting to
+# happen. The canon lists both files as optional, so a repository without them
+# is in order, and no gate looks for them.
 include_vision_roadmap:
   type: bool
   help: "Include structured VISION.md and ROADMAP.md files for project planning and AI-agent guidance?"
-  default: true
+  default: "{% if project_kind == 'code' %}true{% else %}false{% endif %}"
+  when: "{{ project_kind == 'code' }}"
 
 include_license:
   type: bool
