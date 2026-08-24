@@ -73,12 +73,16 @@ alias c := check
 check:
     @uv run python scripts/check.py
 
+# `check` is the gate, not this recipe. ruff exits non-zero when findings remain
+# after fixing — an unfixable one used to abort `fix` and silently skip every
+# step below it. Report the leftovers and carry on; `check` still fails on them.
+
 # Auto-fix what can be fixed: format, then apply safe lint fixes
 [group('daily')]
 fix:
     @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
     uv run ruff format .
-    uv run ruff check --fix .
+    uv run ruff check --fix . || printf '\033[93m⚠  findings above need manual work — "just check" still fails on them\033[0m\n'
 {%- if include_typst %}
     typstyle -i publication/
 {%- endif %}
