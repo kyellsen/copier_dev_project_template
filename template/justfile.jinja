@@ -80,9 +80,9 @@ check:
 # Auto-fix what can be fixed: format, then apply safe lint fixes
 [group('daily')]
 fix:
-    @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
+    @printf "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m\n"
     uv run ruff format .
-    uv run ruff check --fix . || printf '\033[93m⚠  findings above need manual work — "just check" still fails on them\033[0m\n'
+    uv run ruff check --fix . || printf "\033[93m⚠  findings above need manual work — 'just check' still fails on them\033[0m\n"
 {%- if include_typst %}
     typstyle -i publication/
 {%- endif %}
@@ -117,7 +117,7 @@ canon-outdated:
 # Fast subset: Typst formatting only, without writing (the gate runs it too)
 [group('plumbing')]
 check-typst:
-    @echo "\033[1m\033[96mChecking Typst Formatting\033[0m"
+    @printf "\033[1m\033[96mChecking Typst Formatting\033[0m\n"
     typstyle --check publication/
 {% endif %}
 # === Testing ===
@@ -127,19 +127,19 @@ check-typst:
 # Run unit tests only (fast, no I/O)
 [group('plumbing')]
 test-unit:
-    @echo "\033[1m\033[95m🚀 Running Unit Tests\033[0m"
+    @printf "\033[1m\033[95m🚀 Running Unit Tests\033[0m\n"
     uv run pytest tests/unit -m unit -q -rs || test $? -eq 5
 
 # Run integration tests (touches files, DB, network fixtures)
 [group('plumbing')]
 test-int:
-    @echo "\033[1m\033[95m🚀 Running Integration Tests\033[0m"
+    @printf "\033[1m\033[95m🚀 Running Integration Tests\033[0m\n"
     uv run pytest tests/integration -m integration -q -rs || test $? -eq 5
 
 # Run system tests (slow, end-to-end; not part of 'just test')
 [group('plumbing')]
 test-system:
-    @echo "\033[1m\033[95m🚀 Running System Tests\033[0m"
+    @printf "\033[1m\033[95m🚀 Running System Tests\033[0m\n"
     uv run pytest tests/system -m system -q -rs || test $? -eq 5
 
 alias t := test
@@ -172,21 +172,21 @@ alias ana := analyze
 # Project-specific: your analysis entry point
 [group('data')]
 analyze:
-    @echo "\033[1m\033[93m⚠️ 'analyze' target not implemented yet. Add it to your justfile.\033[0m"
+    @printf "\033[1m\033[93m⚠️ 'analyze' target not implemented yet. Add it to your justfile.\033[0m\n"
 
 alias plt := plot
 
 # Project-specific: regenerate figures
 [group('data')]
 plot:
-    @echo "\033[1m\033[93m⚠️ 'plot' target not implemented yet. Add it to your justfile.\033[0m"
+    @printf "\033[1m\033[93m⚠️ 'plot' target not implemented yet. Add it to your justfile.\033[0m\n"
 
 alias pip := pipeline
 
 # Project-specific: chain the steps above into one reproducible run
 [group('data')]
 pipeline:
-    @echo "\033[1m\033[93m⚠️ 'pipeline' target not implemented yet. Combine your steps here.\033[0m"
+    @printf "\033[1m\033[93m⚠️ 'pipeline' target not implemented yet. Combine your steps here.\033[0m\n"
 {% if include_typst %}
 # === Typst ===
 
