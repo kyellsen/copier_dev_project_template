@@ -79,6 +79,9 @@ fix:
     @echo "\033[1m\033[95m🚀 Auto-fixing Code Quality Issues\033[0m"
     uv run ruff format .
     uv run ruff check --fix .
+{%- if include_typst %}
+    typstyle -i publication/
+{%- endif %}
 
 # Refresh AGENTS.canon.md from ~/code/_templates/agents_canon
 [group('setup')]
@@ -103,7 +106,11 @@ canon-outdated:
 {% if include_typst %}
 # === Typst Quality ===
 
-# Check Typst formatting without writing (typstyle --check)
+# The gate owns this check -- scripts/check.py runs it as "Typst Format Check".
+# The recipe stays as the fast subset, the way `lint` relates to `check`: it
+# skips the Python stages when all you changed is a .typ file.
+
+# Fast subset: Typst formatting only, without writing (the gate runs it too)
 [group('plumbing')]
 check-typst:
     @echo "\033[1m\033[96mChecking Typst Formatting\033[0m"

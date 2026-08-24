@@ -1,6 +1,7 @@
 """Code quality check using the pipeline engine. Called by: just check"""
 
 import hashlib
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable
@@ -10,6 +11,7 @@ from pipeline import run_pipeline
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC = PROJECT_ROOT / "src"
+PUBLICATION = PROJECT_ROOT / "publication"
 
 # Stages that record a failure but do not abort the run, so their siblings still
 # report. "Ruff Format Check" belongs here: it is the most trivial check in the
@@ -20,6 +22,7 @@ ALWAYS_RUN_STAGES: set[str] = {
     "Mypy",
     "Canon Integrity",
     "Copier Source",
+    "Typst Format Check",
 }
 
 
@@ -92,6 +95,31 @@ def check_copier_source() -> None:
         sys.exit(1)
 
 
+def check_typst_format() -> None:
+    """Fail if anything under publication/ is not typstyle-formatted.
+
+    This lives in the gate rather than beside it. `just check-typst` ran the
+    same command, but nothing called it -- not `just check`, not `just ci` --
+    so a Typst project could sit unformatted indefinitely and only find out
+    when someone ran the recipe by hand.
+
+    typstyle is a standalone binary, not a uv dependency, so a missing one is
+    an environment problem and says so instead of failing the formatting.
+    On a machine where Homebrew is not on the PATH -- a git hook, a non-login
+    shell -- prepend it: PATH=/home/linuxbrew/.linuxbrew/bin:$PATH.
+    """
+    if shutil.which("typstyle") is None:
+        print("typstyle not on PATH -- cannot check Typst formatting")
+        print("  install: brew install typstyle")
+        print("  in a hook: PATH=/home/linuxbrew/.linuxbrew/bin:$PATH")
+        sys.exit(1)
+
+    result = subprocess.run(["typstyle", "--check", str(PUBLICATION)], cwd=PROJECT_ROOT)
+    if result.returncode != 0:
+        print("  fix: just fix   (or: typstyle -i publication/)")
+        sys.exit(result.returncode)
+
+
 def make_cmd_runner(cmd: list[str], allowed_codes: set[int] | None = None) -> Callable[[], None]:
     """Create a runner function for simple subprocess commands."""
     if allowed_codes is None:
@@ -119,6 +147,12 @@ def main() -> None:
         ("Ruff Lint", make_cmd_runner(["uv", "run", "ruff", "check", "."])),
         ("Mypy", make_cmd_runner(["uv", "run", "mypy", str(SRC)])),
     ]
+
+    # Detected rather than templated: this file is copied verbatim, so it cannot
+    # ask include_typst. A project generated without the publication layer skips
+    # the stage; one that gains it later gets the stage without an edit here.
+    if PUBLICATION.is_dir():
+        all_stages.append(("Typst Format Check", check_typst_format))
 
     if is_ci:
         all_stages.extend(
