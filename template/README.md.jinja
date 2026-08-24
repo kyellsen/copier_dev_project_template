@@ -93,7 +93,15 @@ The workflow is as follows:
    ```bash
    just prepare-assets
    ```
-   The script `scripts/prepare_assets.py` loads the images, downscales them optimally to a max width of 1500px, and saves them compressed (without loss of print quality) into the gitignored `_workspace/output/assets/` directory. *(Note: To process Nikon `.nef` files, run `uv add --dev rawpy` to install the optional RAW processing backend).*
+   The script `scripts/prepare_assets.py` loads the images, downscales them optimally to a max width of 1500px, and saves them compressed (without loss of print quality) into the gitignored `_workspace/output/assets/` directory. Cached output whose source file has disappeared is pruned in the same run. *(Note: To process Nikon `.nef` files, run `uv add --dev rawpy` to install the optional RAW processing backend).*
+
+   Underexposed photographs also get a shadow lift, measured per image: a photo is only touched if its histogram is jammed against the bottom while there is headroom left at the top, and the correction is capped by how much near-white it may add. Drawn images — maps, plots, screenshots — carry no camera tags and are never touched, because their tone values were designed rather than measured. The gamma actually applied is printed and recorded per file in `.asset_hashes.json`, so what was changed about a photo stays answerable; the untouched original never leaves your Nextcloud.
+
+   ```bash
+   just prepare-assets --dry-run    # report what would happen, write nothing
+   just prepare-assets --no-tone    # copy the exposure through untouched
+   just prepare-assets --force      # rebuild everything, ignoring the cache
+   ```
 
 2. **Generate Plots & Tables:**
    Your Python code (`src/`) also saves generated plots and tables into the workspace (`_workspace/output/figures/`).

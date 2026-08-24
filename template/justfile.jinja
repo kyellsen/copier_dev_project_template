@@ -217,10 +217,18 @@ export-pdf filename:
 
 # === Assets & Freeze ===
 
-# Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale)
+# Underexposed photographs get a measured shadow lift; drawn images (maps,
+# plots, screenshots) are recognised by their missing camera tags and left
+# alone. Cached output whose source has disappeared is pruned.
+#
+#   --no-tone   copy the exposure through untouched
+#   --force     rebuild every file, ignoring the cache
+#   --dry-run   report what would happen, write nothing
+
+# Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale, tone)
 [group('data')]
-prepare-assets:
-    uv run python scripts/prepare_assets.py
+prepare-assets *flags:
+    uv run python scripts/prepare_assets.py {{ '{{flags}}' }}
 
 alias add-asset := add-photo
 
