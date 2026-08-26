@@ -228,7 +228,7 @@ export-pdf filename:
 
 # === Assets & Freeze ===
 
-# Photographs are exposure-corrected by fusion (Mertens): a bracket is derived
+{% if include_photo_pipeline %}# Photographs are exposure-corrected by fusion (Mertens): a bracket is derived
 # from the single frame and merged per pixel, so a subject in shade opens up
 # without washing out the sky behind it. Every photograph gets the same
 # treatment. Drawn images (maps, plots, screenshots) carry no camera tags and
@@ -255,7 +255,7 @@ add-photo file:
 {% endif %}    @echo "✓ Copied: publication/assets/{{ '{{file}}' }}"
     @echo "  Typst:  image(\"../../assets/{{ '{{file}}' }}\")"
 
-# Smart-sync pipeline outputs (figures + tables) and refresh committed photos
+{% endif %}# Smart-sync pipeline outputs (figures + tables) and refresh committed photos
 [group('data')]
 freeze:
     uv run python scripts/freeze.py

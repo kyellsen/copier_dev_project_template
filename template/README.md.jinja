@@ -88,7 +88,7 @@ This project includes a completely self-contained Typst setup (`publication/`), 
 Raw data, such as high-resolution camera images, **never** belongs in the Git repository! 
 The workflow is as follows:
 
-1. **Scale Large Photos:** 
+{% if include_photo_pipeline %}1. **Scale Large Photos:**
    When you place new high-resolution photos in your Nextcloud (raw data), run this once:
    ```bash
    just prepare-assets
@@ -105,16 +105,17 @@ The workflow is as follows:
    just prepare-assets --force      # rebuild everything, ignoring the cache
    ```
 
-2. **Generate Plots & Tables:**
+{% endif %}{% if include_photo_pipeline %}2{% else %}1{% endif %}. **Generate Plots & Tables:**
    Your Python code (`src/`) also saves generated plots and tables into the workspace (`_workspace/output/figures/`).
 
-3. **Freeze:**
+{% if include_photo_pipeline %}3{% else %}2{% endif %}. **Freeze:**
    To allow the Git repo to compile independently, these smaller assets must be committed to Git.
-   However, `freeze` handles **pipeline outputs** (figures, tables) and **photos** differently:
+{% if include_photo_pipeline %}   However, `freeze` handles **pipeline outputs** (figures, tables) and **photos** differently:
 
    - **Photos:** Run `just add-photo <path>` to manually add a specific processed photo to your publication. `freeze` will only *refresh* already added photos to prevent Git bloat.
    - **Figures & Tables:** `just freeze` automatically syncs (adds/updates/deletes) all generated plots and tables.
-
+{% else %}   `just freeze` automatically syncs (adds/updates/deletes) all generated plots and tables.
+{% endif %}
    ```bash
    just freeze
    ```

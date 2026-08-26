@@ -71,6 +71,25 @@ include_typst:
   help: "Include Typst publication setup directory? (required by the report and thesis overlays)"
   default: true
 
+# Photographs in a document are a toolchain of their own: an external raw stock,
+# automatic exposure correction, a compressed cache, and a hand-picked route
+# into the document. It costs OpenCV and numpy — some 230 MB in the venv — which
+# a document illustrated only with generated plots has no use for, and it keeps
+# two recipes out of `just --list` that nobody there would run.
+#
+# Hangs off project_kind rather than being asked flat, following the pattern
+# above: a Gutachten owes photographic documentation as a matter of course, a
+# thesis illustrates from its own analysis. Asked only where a document exists.
+include_photo_pipeline:
+  type: bool
+  help: "Include the photo pipeline? (raw stock → exposure correction → cache; adds OpenCV + numpy)"
+  # include_typst is carried in the default, not just in `when`. A suppressed
+  # question still takes its default, so without it a report that declined the
+  # document would answer "yes" to a pipeline that has nowhere to put anything —
+  # OpenCV pulled in for a script that was never generated.
+  default: "{% if project_kind == 'report' and include_typst %}true{% else %}false{% endif %}"
+  when: "{{ include_typst }}"
+
 include_external_data:
   type: bool
   help: "Connect to external Nextcloud data directories? (adds .env for data paths)"
