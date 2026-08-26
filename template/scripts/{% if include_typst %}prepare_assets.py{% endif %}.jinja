@@ -7,8 +7,8 @@ to _workspace/output/assets/, preserving the original subdirectory structure.
 NEF files are decoded with automatic white balance and exposure correction
 via `rawpy` (LibRaw) if installed. All outputs are JPEG, optimized for PDF embedding.
 
-Underexposed photographs get a measured shadow lift -- see `plan_gamma`. Files
-whose source has disappeared are pruned from the cache.
+Photographs get an automatic exposure correction by exposure fusion -- see
+`fuse_exposures`. Files whose source has disappeared are pruned from the cache.
 
 Fast change detection (mtime + size + settings) ensures idempotent runs -- only
 new, changed or differently-configured source files are reprocessed.
@@ -19,12 +19,13 @@ Usage:
 
 import argparse
 import json
-import math
 import multiprocessing
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+import cv2
+import numpy as np
 from dotenv import load_dotenv
 from PIL import Image, ImageOps
 
@@ -49,25 +50,24 @@ SUFFIXES_IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff"}
 SUFFIXES_RAW = {".nef"}
 SUFFIXES_ALL = SUFFIXES_IMAGE | SUFFIXES_RAW
 
-# --- Tone correction ---
-# Three set numbers, and each one is arguable without knowing the subject:
-# when shadows count as blocked, how much of that we accept afterwards, and how
-# far a single correction may ever go. Everything else is measured per image.
-SHADOW_LEVEL = 16  # at or below this, a pixel carries no drawing
-HIGHLIGHT_LEVEL = 240  # at or above this, a pixel is effectively white
-TONE_SHADOW_TRIGGER = 10.0  # % blocked shadow before anything happens at all
-TONE_SHADOW_TARGET = 5.0  # % blocked shadow we aim to be left with
-TONE_HIGHLIGHT_GROWTH = 1.5  # percentage points the near-white share may gain
-TONE_HIGHLIGHT_CEILING = 20.0  # % near-white that is never exceeded, whatever
-TONE_GAMMA_CAP = 2.0  # hard ceiling, whatever the measurement asks for
-TONE_GAMMA_FLOOR = 1.05  # below this, not worth touching the file for
+# --- Exposure correction ---
+# The gamma values of the simulated exposure bracket. Below 1 brightens, above 1
+# darkens; the fusion picks per pixel, so this is a range to choose from rather
+# than a setting to get right. The dark end is what keeps a bright sky from
+# washing out, the bright end is what opens a subject standing in front of it.
+EXPOSURE_BRACKET = (1.6, 1.0, 0.45, 0.3)
+
+# Written into the cache entry. Change it when the method changes and every
+# cached file rebuilds by itself, because the stored tag no longer matches.
+TONE_METHOD = "fusion"
 
 
-def get_file_meta(filepath: Path, tone: bool) -> dict[str, float | int | bool]:
-    """Get mtime + size + settings for fast change detection (no file read).
+def get_file_meta(filepath: Path, tone: str | bool) -> dict[str, float | int | str | bool]:
+    """Get mtime + size + method for fast change detection (no file read).
 
-    `tone` is part of the key on purpose: flipping --no-tone has to invalidate
-    the cache, or the flag would silently do nothing on an already-built cache.
+    The method tag is part of the key on purpose: flipping --no-tone, or
+    changing how correction works at all, has to invalidate the cache. Otherwise
+    the flag silently does nothing on an already-built cache.
     """
     st = filepath.stat()
     return {"mtime": st.st_mtime, "size": st.st_size, "tone": tone}
@@ -78,51 +78,16 @@ def is_raw_file(filepath: Path) -> bool:
     return filepath.suffix.lower() in SUFFIXES_RAW
 
 
-def _share_below(hist: list[int], level: int) -> float:
-    total = sum(hist)
-    return sum(hist[:level]) / total * 100 if total else 0.0
-
-
-def _share_above(hist: list[int], level: int) -> float:
-    total = sum(hist)
-    return sum(hist[level:]) / total * 100 if total else 0.0
-
-
-def _percentile_level(hist: list[int], pct: float) -> int:
-    """Lowest grey level at or below which `pct` percent of the pixels sit."""
-    total = sum(hist)
-    if total == 0:
-        return 0
-    want = total * pct / 100
-    seen = 0
-    for level, count in enumerate(hist):
-        seen += count
-        if seen >= want:
-            return level
-    return 255
-
-
-def _lowest_level_above_at_most(hist: list[int], share: float) -> int:
-    """Lowest grey level from which upwards at most `share` percent sit."""
-    total = sum(hist)
-    if total == 0:
-        return 255
-    limit = total * share / 100
-    seen = 0
-    for level in range(255, -1, -1):
-        seen += hist[level]
-        if seen > limit:
-            return level + 1
-    return 0
-
-
 def is_photograph(img: Image.Image) -> bool:
     """True for a camera image, False for anything drawn, plotted or exported.
 
     A map from QGIS, a matplotlib PNG and a screenshot have tone values that
-    were designed rather than measured, so "correcting" them is always wrong --
-    a dark chart background is a decision, not an underexposure. The camera tags
-    are the only thing in the file that separates the two cases.
+    were designed rather than captured, so "correcting" their exposure is
+    meaningless -- a dark chart background is a decision, not an underexposure.
+    The camera tags are the only thing in the file that separates the two.
+
+    This is not an exposure rule with exceptions; it is the question of whether
+    an exposure exists at all. Photographs are all treated identically.
     """
     try:
         exif = img.getexif()
@@ -139,85 +104,36 @@ def is_photograph(img: Image.Image) -> bool:
     return any(photo.get(tag) for tag in (0x9003, 0x829A, 0x829D))
 
 
-def apply_gamma(img: Image.Image, gamma: float) -> Image.Image:
-    """Apply a gamma curve. Fixes 0 and 255, so it lifts without clipping."""
-    if gamma <= 1.0:
-        return img
-    lut = [round(255 * (i / 255) ** (1 / gamma)) for i in range(256)]
-    return img.point(lut * len(img.getbands()))
+def fuse_exposures(img: Image.Image) -> Image.Image:
+    """Automatic exposure correction by exposure fusion (Mertens et al. 2007).
 
+    A single frame cannot hold both a trunk in shade and the sky behind it, and
+    no global curve can fix that -- brighten enough for the trunk and the sky
+    goes, protect the sky and the trunk stays unreadable. Fusion sidesteps the
+    trade: it derives a bracket of exposures from the one frame, then picks per
+    *pixel* from whichever exposure is best there, weighted by contrast,
+    saturation and well-exposedness. The trunk comes from a bright variant, the
+    sky behind it from a dark one.
 
-def plan_gamma(img: Image.Image) -> float:
-    """The gamma this image needs, or 1.0 to leave it alone.
-
-    Brightness is the wrong trigger: it measures the subject, not the exposure.
-    A frame full of sky reads bright and a dark-themed screenshot reads dark,
-    and neither wants touching. What underexposure actually looks like is a
-    histogram jammed against the bottom while there is room left at the top, and
-    that reads the same on a forest stand, an interior and a stem base.
-
-    The shadow side asks for a lift, the highlight side caps what may be
-    granted. Both come straight off the histogram: a gamma curve maps level t to
-    255*(t/255)**(1/g), so the share ending up beyond a level is the share that
-    started beyond that level's preimage.
-
-    The highlight bound is a *growth* limit, not an absolute one. An absolute
-    one disqualifies every photograph that merely contains sky -- in a forest
-    stand, most of them, which is precisely the stock this exists for. Sky that
-    was already blown stays blown either way; what must not happen is drawing
-    being burnt away, so what gets bounded is how much white may be gained.
+    This is the standard technique for the problem and the implementation is
+    OpenCV's; the only local choice is which exposures to offer it. Every
+    photograph gets the same treatment -- no threshold, no trigger, no branch.
     """
-    grey = img.convert("L")
-    hist = grey.histogram()
-
-    shadow = _share_below(hist, SHADOW_LEVEL)
-    highlight = _share_above(hist, HIGHLIGHT_LEVEL)
-
-    if shadow <= TONE_SHADOW_TRIGGER or highlight >= TONE_HIGHLIGHT_CEILING:
-        return 1.0
-
-    # How far to lift: the level that TONE_SHADOW_TARGET percent sit below has
-    # to land on SHADOW_LEVEL.
-    src = _percentile_level(hist, TONE_SHADOW_TARGET)
-    if src <= 0 or src >= SHADOW_LEVEL:
-        return 1.0
-    g_shadow = math.log(src / 255) / math.log(SHADOW_LEVEL / 255)
-
-    # How far the highlights allow.
-    allowed = min(highlight + TONE_HIGHLIGHT_GROWTH, TONE_HIGHLIGHT_CEILING)
-    top = _lowest_level_above_at_most(hist, allowed)
-    g_high = (
-        math.log(top / 255) / math.log(HIGHLIGHT_LEVEL / 255) if 0 < top < 255 else TONE_GAMMA_CAP
-    )
-
-    gamma = min(g_shadow, g_high, TONE_GAMMA_CAP)
-
-    # Those bounds are exact on the luminance histogram, but the curve is applied
-    # per channel and luminance is a weighted sum of them -- the two only agree
-    # where the channels do, and on a blue sky they do not. Plus the 8-bit table
-    # rounds. So verify the way the file will actually be written and back off.
-    for _ in range(4):
-        if gamma < TONE_GAMMA_FLOOR:
-            return 1.0
-        after = _share_above(apply_gamma(img, gamma).convert("L").histogram(), HIGHLIGHT_LEVEL)
-        if after <= allowed:
-            return gamma
-        gamma -= 0.1
-
-    return 1.0
+    base = np.asarray(img.convert("RGB")).astype(np.float32) / 255.0
+    bracket = [
+        (np.clip(base, 0.0, 1.0) ** gamma * 255).astype(np.uint8) for gamma in EXPOSURE_BRACKET
+    ]
+    fused = cv2.createMergeMertens().process(bracket)
+    return Image.fromarray(np.clip(fused * 255, 0, 255).astype(np.uint8))
 
 
-def process_raw(src_path: Path, dest_path: Path) -> tuple[bool, float]:
-    """Decode a RAW file with auto white balance and exposure correction.
-
-    No shadow lift here: LibRaw already tone-maps off the sensor data, which is
-    a better starting point than anything this can do to an 8-bit result.
-    """
+def process_raw(src_path: Path, dest_path: Path, tone: bool) -> bool:
+    """Decode a RAW file with auto white balance and exposure correction."""
     try:
         import rawpy
     except ImportError:
         print(f"  ✗ rawpy not installed — cannot process {src_path.name}")
-        return False, 1.0
+        return False
 
     try:
         with rawpy.imread(str(src_path)) as raw:
@@ -229,21 +145,23 @@ def process_raw(src_path: Path, dest_path: Path) -> tuple[bool, float]:
 
         img = Image.fromarray(rgb)
         img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
+        if tone:
+            img = fuse_exposures(img)
         img.save(dest_path, "JPEG", quality=QUALITY, optimize=True)
-        return True, 1.0
+        return True
 
     except Exception as e:
         print(f"  ✗ RAW error {src_path.name}: {e}")
-        return False, 1.0
+        return False
 
 
-def process_standard_image(src_path: Path, dest_path: Path, tone: bool) -> tuple[bool, float]:
-    """Process a standard image (JPG/PNG): EXIF fix, downscale, tone, compress.
+def process_standard_image(src_path: Path, dest_path: Path, tone: bool) -> tuple[bool, bool]:
+    """Process a standard image: EXIF fix, downscale, fuse exposures, compress.
 
-    Returns (success, applied_gamma). The gamma is reported and recorded rather
-    than left implicit: a photograph in an expert report is evidence, so what
-    was changed about it has to stay answerable. The untouched original stays in
-    the external asset directory either way.
+    Returns (success, corrected). The correction is reported and recorded rather
+    than left implicit: a photograph in an expert report is evidence, so what was
+    done to it has to stay answerable. The untouched original stays in the
+    external asset directory either way.
 
     The EXIF block is carried over deliberately. A capture date per photo is
     routinely required, and DateTimeOriginal is the only evidence for it that
@@ -261,11 +179,10 @@ def process_standard_image(src_path: Path, dest_path: Path, tone: bool) -> tuple
                 img = img.convert("RGB")
             img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
 
-            # Measured after downscaling, so the histogram is the one that ends
-            # up in the file, and the verification loop stays cheap.
-            gamma = plan_gamma(img) if (tone and photograph) else 1.0
-            if gamma > 1.0:
-                img = apply_gamma(img, gamma)
+            # Fused after downscaling: same result, a fraction of the work.
+            corrected = tone and photograph
+            if corrected:
+                img = fuse_exposures(img)
 
             img.save(
                 dest_path,
@@ -274,46 +191,47 @@ def process_standard_image(src_path: Path, dest_path: Path, tone: bool) -> tuple
                 optimize=True,
                 exif=exif.tobytes() if len(exif) else b"",
             )
-        return True, gamma
+        return True, corrected
 
     except Exception as e:
         print(f"  ✗ Error {src_path.name}: {e}")
-        return False, 1.0
+        return False, False
 
 
 def process_image_task(
     src_path: Path,
     dest_path: Path,
-    meta: dict[str, float | int | bool],
+    meta: dict[str, float | int | str | bool],
     file_key: str,
     tone: bool,
-) -> tuple[bool, str, dict[str, float | int | bool] | None]:
-    """Process a single image: convert/downscale/tone, save. Runs in a worker.
+) -> tuple[bool, str, dict[str, float | int | str | bool] | None]:
+    """Process a single image: convert/downscale/correct, save. Runs in a worker.
 
     Returns (success_flag, file_key, meta).
     """
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
     if is_raw_file(src_path):
-        success, gamma = process_raw(src_path, dest_path)
+        success = process_raw(src_path, dest_path, tone)
+        corrected = tone
     else:
-        success, gamma = process_standard_image(src_path, dest_path, tone)
+        success, corrected = process_standard_image(src_path, dest_path, tone)
 
     if success:
         src_mb = float(meta["size"]) / (1024 * 1024)
         dst_kb = dest_path.stat().st_size / 1024
         fmt = "RAW" if is_raw_file(src_path) else "IMG"
-        note = f", gamma {gamma:.2f}" if gamma > 1.0 else ""
+        note = ", exposure fused" if corrected else ""
         print(f"  ✓ [{fmt}] {src_path.name}: {src_mb:.1f} MB → {dst_kb:.0f} KB{note}")
-        if gamma > 1.0:
-            meta = {**meta, "gamma": round(gamma, 3)}
+        if corrected:
+            meta = {**meta, "corrected": TONE_METHOD}
         return True, file_key, meta
 
     return False, file_key, None
 
 
 def prune_cache(
-    cache: dict[str, dict[str, float | int | bool]],
+    cache: dict[str, dict[str, float | int | str | bool]],
     live_keys: set[str],
     dry_run: bool,
 ) -> int:
@@ -350,7 +268,7 @@ def main() -> None:
     parser.add_argument(
         "--no-tone",
         action="store_true",
-        help="never lift shadows, copy the exposure through as it is",
+        help="skip exposure correction, copy the exposure through as it is",
     )
     parser.add_argument(
         "--force",
@@ -364,10 +282,15 @@ def main() -> None:
     )
     args = parser.parse_args()
     tone = not args.no_tone
+    tone_tag: str | bool = TONE_METHOD if tone else False
 
     # Fix rawpy/OpenMP deadlocks on Linux
     if multiprocessing.get_start_method(allow_none=True) != "spawn":
         multiprocessing.set_start_method("spawn", force=True)
+
+    # OpenCV threads its own work; combined with a process pool that oversubscribes
+    # every core and runs slower than either alone.
+    cv2.setNumThreads(1)
 
     if not RAW_IMAGES_DIR or not RAW_IMAGES_DIR.exists():
         print("Info: Source directory for assets does not exist or is not configured.")
@@ -379,7 +302,7 @@ def main() -> None:
     WORKSPACE_ASSETS.mkdir(parents=True, exist_ok=True)
 
     # Load hashes
-    cache: dict[str, dict[str, float | int | bool]] = {}
+    cache: dict[str, dict[str, float | int | str | bool]] = {}
     if HASH_FILE.exists():
         try:
             with HASH_FILE.open("r") as f:
@@ -398,7 +321,7 @@ def main() -> None:
 
     mode = []
     if not tone:
-        mode.append("no tone correction")
+        mode.append("no exposure correction")
     if args.force:
         mode.append("forced rebuild")
     if args.dry_run:
@@ -415,7 +338,7 @@ def main() -> None:
         rel_path = img_path.relative_to(RAW_IMAGES_DIR)
         dest_path = WORKSPACE_ASSETS / rel_path.with_suffix(".jpg")
         file_key = str(rel_path)
-        meta = get_file_meta(img_path, tone)
+        meta = get_file_meta(img_path, tone_tag)
         live_keys.add(str(rel_path.with_suffix("")))
 
         cached = cache.get(file_key)
@@ -425,10 +348,10 @@ def main() -> None:
             and cached
             and cached.get("mtime") == meta["mtime"]
             and cached.get("size") == meta["size"]
-            # No default: an entry written before tone correction existed has no
-            # such key, and it has to rebuild whichever way the flag is set --
-            # a default would silently pass off untoned output as current.
-            and cached.get("tone") == tone
+            # No default: an entry written before this method existed carries a
+            # different tag or none, and has to rebuild whichever way the flag
+            # is set. A default would pass off stale output as current.
+            and cached.get("tone") == tone_tag
         ):
             continue  # Up-to-date
 
@@ -444,7 +367,7 @@ def main() -> None:
         return
 
     # Process new/changed files in parallel using all CPU cores
-    toned = 0
+    corrected = 0
     if tasks:
         cores = multiprocessing.cpu_count()
         print(f"\n→ Processing {len(tasks)} files using {cores} CPU cores...")
@@ -454,7 +377,7 @@ def main() -> None:
                 success, file_key, meta_result = future.result()
                 if success and meta_result is not None:
                     total_processed += 1
-                    toned += 1 if meta_result.get("gamma") else 0
+                    corrected += 1 if meta_result.get("corrected") else 0
                     cache[file_key] = meta_result
 
     total_skipped = len(image_files) - total_processed
@@ -464,8 +387,8 @@ def main() -> None:
         json.dump(cache, f, indent=2)
 
     print(f"\n✓ prepare-assets done: {total_processed} new/updated, {total_skipped} cached")
-    if toned:
-        print(f"  {toned} underexposed photo(s) got a shadow lift (gamma recorded per file)")
+    if corrected:
+        print(f"  {corrected} photograph(s) exposure-corrected by fusion")
     if total_processed > 0:
         print("  Use 'just add-photo <path/to/file.jpg>' to add specific assets to publication.")
 

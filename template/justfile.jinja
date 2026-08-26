@@ -228,15 +228,17 @@ export-pdf filename:
 
 # === Assets & Freeze ===
 
-# Underexposed photographs get a measured shadow lift; drawn images (maps,
-# plots, screenshots) are recognised by their missing camera tags and left
-# alone. Cached output whose source has disappeared is pruned.
+# Photographs are exposure-corrected by fusion (Mertens): a bracket is derived
+# from the single frame and merged per pixel, so a subject in shade opens up
+# without washing out the sky behind it. Every photograph gets the same
+# treatment. Drawn images (maps, plots, screenshots) carry no camera tags and
+# are left alone. Cached output whose source has disappeared is pruned.
 #
 #   --no-tone   copy the exposure through untouched
 #   --force     rebuild every file, ignoring the cache
 #   --dry-run   report what would happen, write nothing
 
-# Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale, tone)
+# Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale, expose)
 [group('data')]
 prepare-assets *flags:
     uv run python scripts/prepare_assets.py {{ '{{flags}}' }}
