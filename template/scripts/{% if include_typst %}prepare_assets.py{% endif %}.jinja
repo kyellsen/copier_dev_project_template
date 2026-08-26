@@ -425,7 +425,10 @@ def main() -> None:
             and cached
             and cached.get("mtime") == meta["mtime"]
             and cached.get("size") == meta["size"]
-            and cached.get("tone", True) == tone
+            # No default: an entry written before tone correction existed has no
+            # such key, and it has to rebuild whichever way the flag is set --
+            # a default would silently pass off untoned output as current.
+            and cached.get("tone") == tone
         ):
             continue  # Up-to-date
 
