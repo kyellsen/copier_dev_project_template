@@ -1,0 +1,100 @@
+"""Guards on the asset pipeline's silent failure modes.
+
+Every property tested here failed at some point without anything going red: a
+photograph lying on its side is a valid JPEG, and one stripped of its capture
+date is too. Neither the compiler nor a glance at a contact sheet catches that,
+so it gets caught here.
+"""
+
+import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+from PIL import Image
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT = PROJECT_ROOT / "scripts" / "prepare_assets.py"
+
+ORIENTATION = 0x0112
+EXIF_IFD = 0x8769
+DATETIME_ORIGINAL = 0x9003
+MODEL = 0x0110
+ROTATE_90 = 6  # "the top of the subject is on the right-hand edge"
+TAKEN = "2026:08:20 18:21:19"
+
+
+def load_prepare_assets() -> ModuleType:
+    """Import scripts/prepare_assets.py, which is not part of the package."""
+    spec = importlib.util.spec_from_file_location("prepare_assets", SCRIPT)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["prepare_assets"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def write_sideways_photograph(path: Path) -> None:
+    """A wide frame whose EXIF says the camera was held on its side.
+
+    This is what a phone writes for a portrait shot: the sensor data stays
+    landscape and a tag records the rotation the viewer is meant to apply.
+    """
+    img = Image.new("RGB", (400, 300), (90, 90, 90))
+    exif = img.getexif()
+    exif[ORIENTATION] = ROTATE_90
+    exif[MODEL] = "TestCam"  # without a camera tag it would count as drawn
+    exif.get_ifd(EXIF_IFD)[DATETIME_ORIGINAL] = TAKEN
+    img.save(path, "JPEG", exif=exif)
+
+
+@pytest.mark.unit
+def test_portrait_photograph_comes_out_upright(tmp_path: Path) -> None:
+    """The rotation is baked into the pixels, so no consumer re-applies it.
+
+    Regression: reading the EXIF before calling exif_transpose deleted the very
+    tag it goes on to read -- getexif() hands out the image's own Exif object,
+    not a copy -- and every portrait frame came out lying down.
+    """
+    module = load_prepare_assets()
+    src, dest = tmp_path / "portrait.jpg", tmp_path / "out.jpg"
+    write_sideways_photograph(src)
+
+    ok, _ = module.process_standard_image(src, dest, tone=False)
+    assert ok
+
+    with Image.open(dest) as out:
+        assert out.height > out.width, "portrait frame was written lying down"
+        assert out.getexif().get(ORIENTATION) in (None, 1), (
+            "the orientation tag survived next to already-rotated pixels — "
+            "a viewer that honours it turns the image a second time"
+        )
+
+
+@pytest.mark.unit
+def test_capture_date_survives(tmp_path: Path) -> None:
+    """DateTimeOriginal is the only evidence of a capture date that survives a
+    rename, and a report routinely has to state one per photograph."""
+    module = load_prepare_assets()
+    src, dest = tmp_path / "dated.jpg", tmp_path / "out.jpg"
+    write_sideways_photograph(src)
+
+    ok, _ = module.process_standard_image(src, dest, tone=False)
+    assert ok
+
+    with Image.open(dest) as out:
+        assert out.getexif().get_ifd(EXIF_IFD).get(DATETIME_ORIGINAL) == TAKEN
+
+
+@pytest.mark.unit
+def test_drawn_images_are_not_exposure_corrected(tmp_path: Path) -> None:
+    """A map, a plot or a screenshot has no exposure to correct -- its tone
+    values were designed, not captured. Camera tags tell the two apart."""
+    module = load_prepare_assets()
+    plot = tmp_path / "plot.png"
+    Image.new("RGB", (400, 300), (20, 20, 30)).save(plot, "PNG")
+
+    ok, corrected = module.process_standard_image(plot, tmp_path / "out.jpg", tone=True)
+    assert ok
+    assert not corrected, "an image without camera tags must not be exposure-corrected"
