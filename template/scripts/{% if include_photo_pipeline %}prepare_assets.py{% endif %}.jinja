@@ -171,10 +171,15 @@ def process_standard_image(src_path: Path, dest_path: Path, tone: bool) -> tuple
     """
     try:
         with Image.open(src_path) as handle:
-            exif = handle.getexif()
-            exif.pop(0x0112, None)  # Orientation, already baked into the pixels
             photograph = is_photograph(handle)
             img: Image.Image = ImageOps.exif_transpose(handle) or handle
+            # Read the EXIF *after* the transpose. getexif() hands out the
+            # image's own Exif object, not a copy, so popping Orientation first
+            # deletes the very tag exif_transpose reads next -- and then nothing
+            # rotates at all, silently, for every portrait frame in the stock.
+            # exif_transpose clears the tag itself; the pop is belt to braces.
+            exif = img.getexif()
+            exif.pop(0x0112, None)  # Orientation, already baked into the pixels
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
             img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
