@@ -26,6 +26,10 @@ Test location **MUST** match the marker. Mixing markers in a single directory is
 | `tests/integration/` | `@pytest.mark.integration` |
 | `tests/system/` | `@pytest.mark.system` |
 
+Each directory arrives with a `test_smoke.py`. Replace it with real tests — but
+do **not** delete it until you have some: `pytest` answers a *missing* directory
+with exit code 4, and `just test` / `just ci` turn red on it.
+
 ---
 
 ## 3. Running Tests

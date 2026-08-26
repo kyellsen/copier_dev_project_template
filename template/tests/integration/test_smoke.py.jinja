@@ -1,0 +1,34 @@
+"""Smoke test of the integration tier — here so the tier is never empty.
+
+`just test-int` runs `pytest tests/integration`. When that directory does not
+exist, pytest exits **4** (a usage error), and the recipe's `|| test $? -eq 5`
+catches only the empty-collection case — so `just test` and `just ci` are red
+in a project that has not written an integration test yet.
+
+That was not a hypothetical: `_exclude` in copier.yml drops every `.gitkeep`
+from the render, so a tier directory that held nothing else never reached a
+generated project at all. A tier keeps its directory by shipping a test, not a
+placeholder.
+
+Replace this with real integration tests. Do not delete it until there are some.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+import {{ python_module_name }} as pkg
+
+
+@pytest.mark.integration
+def test_the_package_is_on_disk_and_the_filesystem_is_writable(tmp_path: Path) -> None:
+    """What every integration test needs: a real install and a real file."""
+    # The file, not just the importable name — an editable install that broke
+    # leaves the name resolvable and points it at nothing.
+    assert Path(pkg.__file__ or "").is_file()
+
+    note = tmp_path / "smoke.txt"
+    note.write_text("integration", encoding="utf-8")
+    assert note.read_text(encoding="utf-8") == "integration"

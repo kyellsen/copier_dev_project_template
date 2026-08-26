@@ -113,6 +113,20 @@ the versioned hook judges the working tree as it is. That is also why the
 generated project no longer carries a `pre-commit` dependency at all: the hook
 is nine lines of bash.
 
+## Every test tier ships a test
+
+`tests/unit/`, `tests/integration/` and `tests/system/` each carry a
+`test_smoke.py`, and `check-render` asserts that all three arrive in a generated
+project. Replace them with real tests; never leave a tier empty.
+
+**Why:** a tier directory that holds only a `.gitkeep` does not arrive at all —
+`copier.yml` excludes `**/.gitkeep` from the render — and pytest answers a
+*missing* directory with exit 4, a usage error that the recipes'
+`|| test $? -eq 5` does not catch. So `just test` and `just ci` were red in
+every generated project from its first day, and nobody read it as a template
+bug because `just check`, the gate everyone actually runs, was green. A
+placeholder the render drops is not a placeholder.
+
 ## Verifying a change
 
 The template has no tests, because the thing that can break is the render. So

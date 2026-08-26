@@ -84,7 +84,16 @@ check-render:
     # Same for the Python that came out of .jinja templates.
     uv run --no-project python -m compileall -q "$OUT/src" "$OUT/scripts" >/dev/null
 
-    echo "✅ template renders: no canon shipped, canon-pull present, justfile parses, generated Python compiles"
+    # Every tier arrives with a test in it. A tier directory that holds only a
+    # .gitkeep does not arrive at all — copier.yml excludes those — and pytest
+    # answers a missing directory with exit 4, which the recipes' `|| test $? -eq 5`
+    # does not catch. `just test` was red in a fresh project for exactly that.
+    for tier in unit integration system; do
+      compgen -G "$OUT/tests/$tier/test_*.py" >/dev/null \
+        || { echo "❌ tests/$tier arrives without a test — its 'just test-*' recipe would exit 4"; exit 1; }
+    done
+
+    echo "✅ template renders: no canon shipped, canon-pull present, justfile parses, generated Python compiles, every test tier populated"
 
 # Generate a throwaway project and keep it, for looking at the result by hand
 [group('daily')]
