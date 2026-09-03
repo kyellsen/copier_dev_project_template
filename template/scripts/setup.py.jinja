@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import sys
 
-from common import PROJECT_ROOT
+from common import PROJECT_ROOT{% if workspace_location_external %}, workspace_root{% endif %}
 
 # Tools that have to exist before `uv sync` can do anything useful. Checked up
 # front rather than letting the first subprocess fail on its own: that route
@@ -82,6 +82,13 @@ def main() -> None:
     for subdir in ["output/figures", "output/tables"]:
         (PROJECT_ROOT / "_workspace" / subdir).mkdir(parents=True, exist_ok=True)
     print("✅ Workspace directory ready (_workspace/)")
+{% else %}
+    # 3. Create the workspace root, the external path out of .env. Only the root
+    # itself — the subdirectories belong to whatever writes them. Without it the
+    # first pipeline run fails on a missing directory nobody was asked to make.
+    ws_root = workspace_root()
+    ws_root.mkdir(parents=True, exist_ok=True)
+    print(f"✅ Workspace root ready ({ws_root})")
 {% endif %}
     print("✅ Setup complete")
 
