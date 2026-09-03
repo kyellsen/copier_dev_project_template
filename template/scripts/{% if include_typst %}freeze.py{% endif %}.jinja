@@ -7,23 +7,13 @@
 3. Size warnings for files > WARN_SIZE_MB.
 """
 
-{% if workspace_location_external %}import os
-{% endif %}import shutil
+import shutil
 from pathlib import Path
 
-from dotenv import load_dotenv
+from common import PROJECT_ROOT, {% if include_photo_pipeline %}asset_sources, {% endif %}workspace_root
 
-from common import PROJECT_ROOT
-
-load_dotenv(PROJECT_ROOT / ".env")
-
-{% if not workspace_location_external %}SOURCE = PROJECT_ROOT / "_workspace" / "output"
-{% else %}workspace_root_str = os.environ.get("WORKSPACE_ROOT")
-if not workspace_root_str:
-    print("❌ Error: WORKSPACE_ROOT not set in .env")
-    exit(1)
-SOURCE = Path(workspace_root_str) / "output"
-{% endif %}PUB = PROJECT_ROOT / "publication"
+SOURCE = workspace_root() / "output"
+PUB = PROJECT_ROOT / "publication"
 
 WARN_SIZE_MB = 2.0
 
@@ -120,19 +110,22 @@ def main() -> None:
         total_removed += removed
         print(f"  → +{added} new, ~{updated} updated, -{removed} removed")
 
-    # 2. Refresh committed photos from cache
-    cache_assets = SOURCE / "assets"
-    pub_assets = PUB / "assets"
-    if pub_assets.exists() and cache_assets.exists():
-        print("\n📷 assets/ (refresh committed photos)")
-        photo_updated = refresh_photos(cache_assets, pub_assets)
+{% if include_photo_pipeline %}    # 2. Refresh committed photos from every image stock's cache. The toggles
+    # are deliberately ignored here: a stock switched off for a faster build is
+    # still committed to the document, and its photos stay current.
+    for source in asset_sources():
+        if not source.publication_dir.exists() or not source.cache_dir.exists():
+            continue
+        label = source.name or "assets"
+        print(f"\n📷 {label} (refresh committed photos)")
+        photo_updated = refresh_photos(source.cache_dir, source.publication_dir)
         total_updated += photo_updated
         if photo_updated > 0:
             print(f"  → ~{photo_updated} photos refreshed from cache")
         else:
             print("  → all photos up-to-date")
 
-    # 3. Size warnings
+{% endif %}    # 3. Size warnings
     print()
     total_mb = 0.0
     warnings: list[str] = []

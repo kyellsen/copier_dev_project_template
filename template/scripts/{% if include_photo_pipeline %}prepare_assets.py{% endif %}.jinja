@@ -1,20 +1,28 @@
-"""Builds a compressed photo cache from the RAW_ASSETS_DIR.
+"""Builds a compressed image cache from the stocks declared in .env.
 
-Reads JPG/JPEG/PNG/WEBP images and NEF (Nikon RAW) files from the configured
-RAW_ASSETS_DIR, downscales them to publication quality, and writes the results
-to _workspace/output/assets/, preserving the original subdirectory structure.
+Reads JPG/JPEG/PNG/WEBP/TIFF images and NEF (Nikon RAW) files from every stock
+`common.asset_sources()` reports, downscales them to publication quality and
+writes the results into the workspace, preserving the subdirectory structure.
 
-NEF files are decoded with automatic white balance and exposure correction
-via `rawpy` (LibRaw) if installed. All outputs are JPEG, optimized for PDF embedding.
+A project with one stock -- the ordinary report -- configures nothing beyond
+`<PREFIX>_RAW_ASSETS_DIR`. A study with several sites names them in
+`<PREFIX>_ASSET_SOURCES`; everything below then runs per stock and prunes per
+stock, so a site switched off keeps its cache.
+
+NEF files are decoded with `rawpy` (LibRaw); their capture date is lifted out
+separately, because rawpy hands back bare pixels. All outputs are JPEG,
+optimised for PDF embedding.
 
 Photographs get an automatic exposure correction by exposure fusion -- see
-`fuse_exposures`. Files whose source has disappeared are pruned from the cache.
+`fuse_exposures`. Drawn images are left alone, and the whole step can be
+switched off with `<PREFIX>_ASSET_TONE=0` or `--no-tone`. Files whose source has
+disappeared are pruned from the cache.
 
-Fast change detection (mtime + size + settings) ensures idempotent runs -- only
-new, changed or differently-configured source files are reprocessed.
+Fast change detection (mtime + size + method) ensures idempotent runs -- only
+new, changed or differently-processed source files are reprocessed.
 
 Usage:
-    python scripts/prepare_assets.py [--no-tone] [--force] [--dry-run]
+    python scripts/prepare_assets.py [--tone | --no-tone] [--force] [--dry-run]
 """
 
 import argparse
@@ -24,23 +32,9 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-import cv2
-import numpy as np
-from dotenv import load_dotenv
 from PIL import Image, ImageOps
 
-from common import PROJECT_ROOT
-
-WORKSPACE_ASSETS = PROJECT_ROOT / "_workspace" / "output" / "assets"
-HASH_FILE = WORKSPACE_ASSETS / ".asset_hashes.json"
-
-# Load environment variables from .env
-load_dotenv(PROJECT_ROOT / ".env")
-
-# Read path from .env
-env_var_name = "{{ python_module_name | upper }}_RAW_ASSETS_DIR"
-raw_dir_str = os.environ.get(env_var_name)
-RAW_IMAGES_DIR = Path(raw_dir_str) if raw_dir_str else None
+from common import ENV_PREFIX, AssetSource, asset_sources, workspace_root
 
 # --- Configuration ---
 MAX_SIZE = (1500, 1500)
@@ -58,20 +52,52 @@ SUFFIXES_ALL = SUFFIXES_IMAGE | SUFFIXES_RAW
 # washing out, the bright end is what opens a subject standing in front of it.
 EXPOSURE_BRACKET = (1.6, 1.0, 0.45, 0.3)
 
-# Written into the cache entry. Change it when the method changes and every
-# cached file rebuilds by itself, because the stored tag no longer matches.
+# Whether photographs are exposure-corrected at all. A report wants it; a thesis
+# that reproduces measurements may not want its figures touched, and says so
+# once in .env instead of remembering a flag on every run.
+TONE_ENV = f"{ENV_PREFIX}_ASSET_TONE"
+
+# Written into every cache entry. Change either tag when the processing changes
+# and each cached file rebuilds by itself, because the stored tag no longer
+# matches. "exif-raw" marks the point from which capture dates survive the RAW
+# path; entries below it have none.
+METHOD = "exif-raw"
 TONE_METHOD = "fusion"
 
+EXIF_ORIENTATION = 0x0112
+EXIF_IFD = 0x8769  # pointer to the sub-IFD holding DateTimeOriginal
 
-def get_file_meta(filepath: Path, tone: str | bool) -> dict[str, float | int | str | bool]:
-    """Get mtime + size + method for fast change detection (no file read).
+# What is carried over from a RAW file. A NEF's own block runs to megabytes --
+# MakerNote plus embedded preview images -- and JPEG's APP1 segment tops out at
+# 64 KB, so copying it wholesale fails with "EXIF data is too long". These are
+# the tags that answer "when was this taken, and with what".
+RAW_EXIF_TAGS = (0x010F, 0x0110, 0x0132)  # Make, Model, DateTime
+RAW_EXIF_SUB_TAGS = (0x9003, 0x9004)  # DateTimeOriginal, DateTimeDigitized
 
-    The method tag is part of the key on purpose: flipping --no-tone, or
-    changing how correction works at all, has to invalidate the cache. Otherwise
-    the flag silently does nothing on an already-built cache.
+CacheEntry = dict[str, float | int | str]
+
+
+def method_tag(tone: bool) -> str:
+    """The processing signature stored in a cache entry.
+
+    Tone is part of it on purpose: flipping the correction off, or changing how
+    it works, has to invalidate the cache. Otherwise the setting silently does
+    nothing on a cache that was already built.
     """
+    return f"{METHOD}+{TONE_METHOD}" if tone else METHOD
+
+
+def get_file_meta(filepath: Path, tone: bool) -> CacheEntry:
+    """Get mtime + size + method for fast change detection (no file read)."""
     st = filepath.stat()
-    return {"mtime": st.st_mtime, "size": st.st_size, "tone": tone}
+    return {"mtime": st.st_mtime, "size": st.st_size, "method": method_tag(tone)}
+
+
+def collect_images(media_dir: Path) -> list[Path]:
+    """Collect all supported image files (recursively) from a stock."""
+    return sorted(
+        f for f in media_dir.rglob("*") if f.is_file() and f.suffix.lower() in SUFFIXES_ALL
+    )
 
 
 def is_raw_file(filepath: Path) -> bool:
@@ -99,7 +125,7 @@ def is_photograph(img: Image.Image) -> bool:
     if exif.get(0x010F) or exif.get(0x0110):  # Make, Model
         return True
     try:
-        photo = exif.get_ifd(0x8769)  # Exif IFD
+        photo = exif.get_ifd(EXIF_IFD)
     except Exception:
         return False
     return any(photo.get(tag) for tag in (0x9003, 0x829A, 0x829D))
@@ -119,13 +145,56 @@ def fuse_exposures(img: Image.Image) -> Image.Image:
     This is the standard technique for the problem and the implementation is
     OpenCV's; the only local choice is which exposures to offer it. Every
     photograph gets the same treatment -- no threshold, no trigger, no branch.
+
+    OpenCV is imported here rather than at the top of the module: it is 72 MB,
+    and a project that leaves the correction off should not have to carry it.
     """
+    import cv2
+    import numpy as np
+
     base = np.asarray(img.convert("RGB")).astype(np.float32) / 255.0
     bracket = [
         (np.clip(base, 0.0, 1.0) ** gamma * 255).astype(np.uint8) for gamma in EXPOSURE_BRACKET
     ]
     fused = cv2.createMergeMertens().process(bracket)
     return Image.fromarray(np.clip(fused * 255, 0, 255).astype(np.uint8))
+
+
+def read_raw_exif(src_path: Path) -> bytes:
+    """Read a RAW file's EXIF block, serialised and ready to attach to the JPEG.
+
+    rawpy decodes pixels and hands back a bare array -- every tag the camera
+    wrote is dropped on the floor. NEF is TIFF underneath, though, so Pillow
+    opens it for metadata even though it cannot develop it, and no extra
+    dependency is needed to keep the capture date.
+
+    Bytes rather than an ``Image.Exif``, because that object stays bound to the
+    file it came from: both the sub-IFD lookup and tobytes() read through the
+    handle, so anything deferred past the ``with`` fails with "seek of closed
+    file" -- which took the whole RAW path down, not just the date.
+
+    Only RAW_EXIF_TAGS are copied, into a freshly built block. Orientation is
+    left out on purpose: ``postprocess`` already rotates the pixels by the
+    camera flip, so a surviving tag would turn the image a second time.
+    """
+    try:
+        with Image.open(src_path) as handle:
+            source = handle.getexif()
+            sub = source.get_ifd(EXIF_IFD)  # lazy; read while the file is open
+
+            out = Image.Exif()
+            for tag in RAW_EXIF_TAGS:
+                if source.get(tag):
+                    out[tag] = source[tag]
+            out_sub = out.get_ifd(EXIF_IFD)
+            for tag in RAW_EXIF_SUB_TAGS:
+                if sub.get(tag):
+                    out_sub[tag] = sub[tag]
+
+            return out.tobytes() if len(out) else b""
+    except Exception:
+        # A RAW dialect Pillow cannot parse costs the date, not the image.
+        return b""
 
 
 def process_raw(src_path: Path, dest_path: Path, tone: bool) -> bool:
@@ -137,6 +206,8 @@ def process_raw(src_path: Path, dest_path: Path, tone: bool) -> bool:
         return False
 
     try:
+        exif = read_raw_exif(src_path)
+
         with rawpy.imread(str(src_path)) as raw:
             rgb = raw.postprocess(
                 use_camera_wb=True,
@@ -148,7 +219,7 @@ def process_raw(src_path: Path, dest_path: Path, tone: bool) -> bool:
         img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
         if tone:
             img = fuse_exposures(img)
-        img.save(dest_path, "JPEG", quality=QUALITY, optimize=True)
+        img.save(dest_path, "JPEG", quality=QUALITY, optimize=True, exif=exif)
         return True
 
     except Exception as e:
@@ -180,7 +251,7 @@ def process_standard_image(src_path: Path, dest_path: Path, tone: bool) -> tuple
             # rotates at all, silently, for every portrait frame in the stock.
             # exif_transpose clears the tag itself; the pop is belt to braces.
             exif = img.getexif()
-            exif.pop(0x0112, None)  # Orientation, already baked into the pixels
+            exif.pop(EXIF_ORIENTATION, None)  # already baked into the pixels
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
             img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
@@ -207,10 +278,10 @@ def process_standard_image(src_path: Path, dest_path: Path, tone: bool) -> tuple
 def process_image_task(
     src_path: Path,
     dest_path: Path,
-    meta: dict[str, float | int | str | bool],
     file_key: str,
+    meta: CacheEntry,
     tone: bool,
-) -> tuple[bool, str, dict[str, float | int | str | bool] | None]:
+) -> tuple[bool, str, CacheEntry | None]:
     """Process a single image: convert/downscale/correct, save. Runs in a worker.
 
     Returns (success_flag, file_key, meta).
@@ -228,7 +299,7 @@ def process_image_task(
         dst_kb = dest_path.stat().st_size / 1024
         fmt = "RAW" if is_raw_file(src_path) else "IMG"
         note = ", exposure fused" if corrected else ""
-        print(f"  ✓ [{fmt}] {src_path.name}: {src_mb:.1f} MB → {dst_kb:.0f} KB{note}")
+        print(f"  ✓ [{fmt}] {file_key}: {src_mb:.1f} MB → {dst_kb:.0f} KB{note}")
         if corrected:
             meta = {**meta, "corrected": TONE_METHOD}
         return True, file_key, meta
@@ -236,8 +307,19 @@ def process_image_task(
     return False, file_key, None
 
 
-def prune_cache(
-    cache: dict[str, dict[str, float | int | str | bool]],
+def cache_key(source: AssetSource, rel_path: Path) -> str:
+    """The cache entry's name: the stock's name plus the path below it.
+
+    The whole relative path is kept, not just the stem: media/tag1/DSC_0042.NEF
+    and media/tag2/DSC_0042.JPG would otherwise collapse onto one entry, and
+    camera counters do wrap.
+    """
+    return f"{source.name}/{rel_path}" if source.name else str(rel_path)
+
+
+def prune_source(
+    source: AssetSource,
+    cache: dict[str, CacheEntry],
     live_keys: set[str],
     dry_run: bool,
 ) -> int:
@@ -245,12 +327,15 @@ def prune_cache(
 
     Without this, renaming a source directory doubles the cache: the new names
     get built and the old ones stay behind forever, indistinguishable from
-    current output. Only files this script produces are ever removed.
+    current output. Only this stock's own output is ever touched, so a stock
+    that was switched off keeps its cache rather than losing it wholesale.
+
+    Returns the number of removed files.
     """
     removed = 0
 
-    for cached in sorted(WORKSPACE_ASSETS.rglob("*.jpg")):
-        rel = cached.relative_to(WORKSPACE_ASSETS)
+    for cached in sorted(source.cache_dir.rglob("*.jpg")):
+        rel = cached.relative_to(source.cache_dir)
         if str(rel.with_suffix("")) in live_keys:
             continue
         print(f"  ✗ {rel} (source gone)")
@@ -258,23 +343,114 @@ def prune_cache(
             cached.unlink()
         removed += 1
 
-    for stale in [k for k in cache if str(Path(k).with_suffix("")) not in live_keys]:
-        cache.pop(stale)
+    prefix = f"{source.name}/" if source.name else ""
+    stale = [
+        key
+        for key in cache
+        if key.startswith(prefix) and str(Path(key[len(prefix) :]).with_suffix("")) not in live_keys
+    ]
+    for key in stale:
+        cache.pop(key)
 
     if not dry_run:
-        for d in sorted(WORKSPACE_ASSETS.rglob("*"), reverse=True):
+        for d in sorted(source.cache_dir.rglob("*"), reverse=True):
             if d.is_dir() and not any(d.iterdir()):
                 d.rmdir()
 
     return removed
 
 
+def resolve_tone(flag: bool | None) -> bool:
+    """Whether to correct exposure: the flag if given, else .env, else on."""
+    if flag is not None:
+        return flag
+    return os.environ.get(TONE_ENV, "1").strip() not in ("0", "false", "no")
+
+
+def process_source(
+    source: AssetSource,
+    cache: dict[str, CacheEntry],
+    tone: bool,
+    args: argparse.Namespace,
+) -> tuple[int, int, int, int]:
+    """Build and prune one stock. Returns (processed, skipped, removed, fused)."""
+    label = source.name or "assets"
+
+    if not source.enabled:
+        print(f"⏩ {label} switched off in .env — skipped")
+        return 0, 0, 0, 0
+
+    if source.media_dir is None:
+        print(f"⚠ {label}: source directory not configured or missing — skipped")
+        return 0, 0, 0, 0
+
+    images = collect_images(source.media_dir)
+    if not images:
+        print(f"⚠ {label}: no images found in {source.media_dir}")
+        return 0, 0, 0, 0
+
+    source.cache_dir.mkdir(parents=True, exist_ok=True)
+    print(f"\n📷 [{label}] {len(images)} images in {source.media_dir}")
+
+    tasks = []
+    live_keys: set[str] = set()
+
+    # Check cache sequentially (fast, avoids process overhead)
+    for img_path in images:
+        rel_path = img_path.relative_to(source.media_dir)
+        dest_path = source.cache_dir / rel_path.with_suffix(".jpg")
+        key = cache_key(source, rel_path)
+        meta = get_file_meta(img_path, tone)
+        live_keys.add(str(rel_path.with_suffix("")))
+
+        cached = cache.get(key)
+        if (
+            not args.force
+            and dest_path.exists()
+            and cached
+            and cached.get("mtime") == meta["mtime"]
+            and cached.get("size") == meta["size"]
+            # No default: an entry written before this method existed carries a
+            # different tag or none, and has to rebuild whichever way the flag
+            # is set. A default would pass off stale output as current.
+            and cached.get("method") == meta["method"]
+        ):
+            continue  # Up-to-date
+
+        tasks.append((img_path, dest_path, key, meta, tone))
+
+    # Remove output whose source has disappeared (renamed or deleted directories)
+    removed = prune_source(source, cache, live_keys, args.dry_run)
+
+    if args.dry_run:
+        print(f"  → would build {len(tasks)}, would prune {removed}")
+        return 0, 0, removed, 0
+
+    processed, fused = 0, 0
+    if tasks:
+        cores = multiprocessing.cpu_count()
+        print(f"  → Processing {len(tasks)} files using {cores} CPU cores...")
+        with ProcessPoolExecutor(max_workers=cores) as executor:
+            futures = [executor.submit(process_image_task, *task) for task in tasks]
+            for future in as_completed(futures):
+                success, key, meta_result = future.result()
+                if success and meta_result is not None:
+                    processed += 1
+                    fused += 1 if meta_result.get("corrected") else 0
+                    cache[key] = meta_result
+
+    skipped = len(images) - processed
+    print(f"  → {processed} processed, {skipped} cached, {removed} pruned")
+    return processed, skipped, removed, fused
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--no-tone",
-        action="store_true",
-        help="skip exposure correction, copy the exposure through as it is",
+        "--tone",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=f"correct exposure by fusion (default: {TONE_ENV} in .env, else on)",
     )
     parser.add_argument(
         "--force",
@@ -287,43 +463,20 @@ def main() -> None:
         help="report what would be built and pruned, write nothing",
     )
     args = parser.parse_args()
-    tone = not args.no_tone
-    tone_tag: str | bool = TONE_METHOD if tone else False
 
     # Fix rawpy/OpenMP deadlocks on Linux
     if multiprocessing.get_start_method(allow_none=True) != "spawn":
         multiprocessing.set_start_method("spawn", force=True)
 
-    # OpenCV threads its own work; combined with a process pool that oversubscribes
-    # every core and runs slower than either alone.
-    cv2.setNumThreads(1)
+    sources = asset_sources()
+    tone = resolve_tone(args.tone)
 
-    if not RAW_IMAGES_DIR or not RAW_IMAGES_DIR.exists():
-        print("Info: Source directory for assets does not exist or is not configured.")
-        print(f"  Please set {env_var_name} in your .env file!")
-        if RAW_IMAGES_DIR:
-            print(f"  Current value: {RAW_IMAGES_DIR}")
-        return
+    if tone:
+        # OpenCV threads its own work; combined with a process pool that
+        # oversubscribes every core and runs slower than either alone.
+        import cv2
 
-    WORKSPACE_ASSETS.mkdir(parents=True, exist_ok=True)
-
-    # Load hashes
-    cache: dict[str, dict[str, float | int | str | bool]] = {}
-    if HASH_FILE.exists():
-        try:
-            with HASH_FILE.open("r") as f:
-                cache = json.load(f)
-        except json.JSONDecodeError:
-            pass
-
-    # Find all supported image files recursively
-    image_files = sorted(
-        f for f in RAW_IMAGES_DIR.rglob("*") if f.is_file() and f.suffix.lower() in SUFFIXES_ALL
-    )
-
-    if not image_files:
-        print(f"Info: No images found in {RAW_IMAGES_DIR}")
-        return
+        cv2.setNumThreads(1)
 
     mode = []
     if not tone:
@@ -332,70 +485,36 @@ def main() -> None:
         mode.append("forced rebuild")
     if args.dry_run:
         mode.append("dry run")
-    suffix = f"  [{', '.join(mode)}]" if mode else ""
-    print(f"📷 Found {len(image_files)} images in {RAW_IMAGES_DIR}{suffix}")
+    if mode:
+        print(f"[{', '.join(mode)}]")
 
-    total_processed = 0
-    tasks = []
-    live_keys: set[str] = set()
+    hash_file = workspace_root() / ".asset_hashes.json"
+    cache: dict[str, CacheEntry] = {}
+    if hash_file.exists():
+        try:
+            with hash_file.open("r") as f:
+                cache = json.load(f)
+        except json.JSONDecodeError:
+            pass
 
-    # Check cache sequentially (fast, avoids process overhead)
-    for img_path in image_files:
-        rel_path = img_path.relative_to(RAW_IMAGES_DIR)
-        dest_path = WORKSPACE_ASSETS / rel_path.with_suffix(".jpg")
-        file_key = str(rel_path)
-        meta = get_file_meta(img_path, tone_tag)
-        live_keys.add(str(rel_path.with_suffix("")))
-
-        cached = cache.get(file_key)
-        if (
-            not args.force
-            and dest_path.exists()
-            and cached
-            and cached.get("mtime") == meta["mtime"]
-            and cached.get("size") == meta["size"]
-            # No default: an entry written before this method existed carries a
-            # different tag or none, and has to rebuild whichever way the flag
-            # is set. A default would pass off stale output as current.
-            and cached.get("tone") == tone_tag
-        ):
-            continue  # Up-to-date
-
-        tasks.append((img_path, dest_path, meta, file_key, tone))
-
-    # Remove output whose source has disappeared (renamed or deleted directories)
-    print("\n🧹 Pruning")
-    removed = prune_cache(cache, live_keys, args.dry_run)
-    print(f"  → {removed} orphaned file(s)" if removed else "  → nothing orphaned")
+    totals = [0, 0, 0, 0]
+    for source in sources:
+        for i, value in enumerate(process_source(source, cache, tone, args)):
+            totals[i] += value
+    processed, skipped, removed, fused = totals
 
     if args.dry_run:
-        print(f"\n✓ dry run: would build {len(tasks)}, would prune {removed}, nothing written")
+        print(f"\n✓ dry run: would prune {removed}, nothing written")
         return
 
-    # Process new/changed files in parallel using all CPU cores
-    corrected = 0
-    if tasks:
-        cores = multiprocessing.cpu_count()
-        print(f"\n→ Processing {len(tasks)} files using {cores} CPU cores...")
-        with ProcessPoolExecutor(max_workers=cores) as executor:
-            futures = [executor.submit(process_image_task, *task) for task in tasks]
-            for future in as_completed(futures):
-                success, file_key, meta_result = future.result()
-                if success and meta_result is not None:
-                    total_processed += 1
-                    corrected += 1 if meta_result.get("corrected") else 0
-                    cache[file_key] = meta_result
-
-    total_skipped = len(image_files) - total_processed
-
-    # Save hashes
-    with HASH_FILE.open("w") as f:
+    hash_file.parent.mkdir(parents=True, exist_ok=True)
+    with hash_file.open("w") as f:
         json.dump(cache, f, indent=2)
 
-    print(f"\n✓ prepare-assets done: {total_processed} new/updated, {total_skipped} cached")
-    if corrected:
-        print(f"  {corrected} photograph(s) exposure-corrected by fusion")
-    if total_processed > 0:
+    print(f"\n✓ prepare-assets done: {processed} new/updated, {skipped} cached, {removed} pruned")
+    if fused:
+        print(f"  {fused} photograph(s) exposure-corrected by fusion")
+    if processed > 0:
         print("  Use 'just add-photo <path/to/file.jpg>' to add specific assets to publication.")
 
 

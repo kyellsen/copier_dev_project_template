@@ -26,7 +26,13 @@ TAKEN = "2026:08:20 18:21:19"
 
 
 def load_prepare_assets() -> ModuleType:
-    """Import scripts/prepare_assets.py, which is not part of the package."""
+    """Import scripts/prepare_assets.py, which is not part of the package.
+
+    scripts/ goes on the path first: the script imports its sibling ``common``,
+    which only resolves from that directory.
+    """
+    if str(SCRIPT.parent) not in sys.path:
+        sys.path.insert(0, str(SCRIPT.parent))
     spec = importlib.util.spec_from_file_location("prepare_assets", SCRIPT)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -47,6 +53,17 @@ def write_sideways_photograph(path: Path) -> None:
     exif[MODEL] = "TestCam"  # without a camera tag it would count as drawn
     exif.get_ifd(EXIF_IFD)[DATETIME_ORIGINAL] = TAKEN
     img.save(path, "JPEG", exif=exif)
+
+
+def make_source(module: ModuleType, name: str, cache_dir: Path) -> object:
+    """An AssetSource standing in for one configured image stock."""
+    return module.AssetSource(
+        name=name,
+        media_dir=None,
+        cache_dir=cache_dir,
+        publication_dir=cache_dir,
+        enabled=True,
+    )
 
 
 @pytest.mark.unit
@@ -75,7 +92,7 @@ def test_portrait_photograph_comes_out_upright(tmp_path: Path) -> None:
 @pytest.mark.unit
 def test_capture_date_survives(tmp_path: Path) -> None:
     """DateTimeOriginal is the only evidence of a capture date that survives a
-    rename, and a report routinely has to state one per photograph."""
+    rename, and a document routinely has to state one per photograph."""
     module = load_prepare_assets()
     src, dest = tmp_path / "dated.jpg", tmp_path / "out.jpg"
     write_sideways_photograph(src)
@@ -98,3 +115,105 @@ def test_drawn_images_are_not_exposure_corrected(tmp_path: Path) -> None:
     ok, corrected = module.process_standard_image(plot, tmp_path / "out.jpg", tone=True)
     assert ok
     assert not corrected, "an image without camera tags must not be exposure-corrected"
+
+
+@pytest.mark.unit
+def test_raw_exif_is_read_and_orientation_dropped(tmp_path: Path) -> None:
+    """rawpy returns a bare pixel array, so the capture date has to be lifted
+    out of the RAW file separately -- NEF is TIFF underneath, which is why
+    Pillow can read the tags it cannot develop.
+
+    The orientation must not come along: postprocess already applied the camera
+    flip to the pixels, and a surviving tag turns the image a second time.
+
+    The stand-in is a JPEG rather than a NEF: read_raw_exif only asks Pillow to
+    parse container metadata, which is the same code path for both, and a real
+    RAW frame is far past what the unit tier may read.
+    """
+    module = load_prepare_assets()
+    src = tmp_path / "raw_stand_in.jpg"
+    write_sideways_photograph(src)
+
+    block = module.read_raw_exif(src)
+
+    # Serialised bytes, inspected after the source file is closed: the sub-IFD
+    # and tobytes() both read through the handle, so a block assembled too late
+    # either loses the date or takes the whole RAW path down.
+    assert TAKEN.encode() in block, "the capture date did not reach the JPEG"
+
+    parsed = Image.Exif()
+    parsed.load(block)
+    assert parsed.get(ORIENTATION) is None, (
+        "orientation survived — postprocess already rotated the pixels"
+    )
+    # A NEF's own block runs to megabytes (MakerNote plus embedded previews).
+    # JPEG's APP1 segment holds 64 KB, and Pillow refuses the save outright
+    # with "EXIF data is too long" -- which failed the image, not just the date.
+    assert len(block) < 4096, f"EXIF block grew to {len(block)} bytes; APP1 holds 65535"
+
+
+@pytest.mark.unit
+def test_raw_exif_absence_is_not_fatal(tmp_path: Path) -> None:
+    """A RAW dialect Pillow cannot parse costs the capture date, not the image."""
+    module = load_prepare_assets()
+    broken = tmp_path / "not_really.nef"
+    broken.write_bytes(b"not a raw file")
+
+    assert module.read_raw_exif(broken) == b""
+
+
+@pytest.mark.unit
+def test_cache_entry_distinguishes_the_tone_setting(tmp_path: Path) -> None:
+    """A cache built by an older method, or with the correction off, has to
+    rebuild rather than count as current."""
+    module = load_prepare_assets()
+    src = tmp_path / "any.jpg"
+    Image.new("RGB", (40, 30)).save(src, "JPEG")
+
+    assert module.get_file_meta(src, tone=True)["method"] == module.method_tag(True)
+    assert module.get_file_meta(src, tone=False)["method"] != module.method_tag(True)
+
+
+@pytest.mark.unit
+def test_prune_drops_output_whose_source_is_gone(tmp_path: Path) -> None:
+    """Renaming a source directory must not double the cache, and pruning one
+    stock must leave another stock's entries alone."""
+    module = load_prepare_assets()
+    assets = tmp_path / "assets"
+    (assets / "tag1").mkdir(parents=True)
+    (assets / "tag2").mkdir()
+    Image.new("RGB", (40, 30)).save(assets / "tag1" / "keep.jpg", "JPEG")
+    Image.new("RGB", (40, 30)).save(assets / "tag2" / "orphan.jpg", "JPEG")
+
+    method = module.method_tag(True)
+    cache = {
+        "site_a/tag1/keep.NEF": {"mtime": 1.0, "size": 1, "method": method},
+        "site_a/tag2/orphan.NEF": {"mtime": 1.0, "size": 1, "method": method},
+        "site_b/elsewhere.NEF": {"mtime": 1.0, "size": 1, "method": method},
+    }
+
+    removed = module.prune_source(
+        make_source(module, "site_a", assets), cache, {"tag1/keep"}, dry_run=False
+    )
+
+    assert removed == 1
+    assert (assets / "tag1" / "keep.jpg").exists()
+    assert not (assets / "tag2").exists(), "the emptied directory was left behind"
+    assert set(cache) == {"site_a/tag1/keep.NEF", "site_b/elsewhere.NEF"}, (
+        "pruning one stock must not touch another stock's entries"
+    )
+
+
+@pytest.mark.unit
+def test_dry_run_removes_nothing(tmp_path: Path) -> None:
+    """--dry-run reports the prune without acting on it."""
+    module = load_prepare_assets()
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    Image.new("RGB", (40, 30)).save(assets / "orphan.jpg", "JPEG")
+    cache: dict[str, dict[str, float | int | str]] = {}
+
+    removed = module.prune_source(make_source(module, "", assets), cache, set(), dry_run=True)
+
+    assert removed == 1
+    assert (assets / "orphan.jpg").exists()

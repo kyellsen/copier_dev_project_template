@@ -13,6 +13,9 @@ dependencies = [
 {% if include_typst %}    "Pillow>=10.0",  # For downsampling high-resolution publication assets
 {% endif %}{% if include_photo_pipeline %}    # Exposure fusion in the photo pipeline. Headless because the machines that
     # run it have no display, and the GUI build drags in X11 for nothing.
+    # `prepare_assets.py` imports OpenCV lazily, so a project that leaves the
+    # correction off ({{ python_module_name | upper }}_ASSET_TONE=0) can drop
+    # these two lines and keep the rest of the pipeline.
     "opencv-python-headless>=4.10",
     "numpy>=1.26",
 {% endif %}    # Uncomment further data science dependencies as needed:

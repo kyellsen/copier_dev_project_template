@@ -228,17 +228,21 @@ export-pdf filename:
 
 # === Assets & Freeze ===
 
-{% if include_photo_pipeline %}# Photographs are exposure-corrected by fusion (Mertens): a bracket is derived
+{% if include_photo_pipeline %}# Reads every image stock declared in .env — one by default, several when
+# {{ python_module_name | upper }}_ASSET_SOURCES names them — and builds a
+# compressed JPEG cache per stock, pruning output whose source has disappeared.
+#
+# Photographs are exposure-corrected by fusion (Mertens): a bracket is derived
 # from the single frame and merged per pixel, so a subject in shade opens up
 # without washing out the sky behind it. Every photograph gets the same
 # treatment. Drawn images (maps, plots, screenshots) carry no camera tags and
-# are left alone. Cached output whose source has disappeared is pruned.
+# are left alone.
 #
-#   --no-tone   copy the exposure through untouched
+#   --no-tone   copy the exposure through untouched ({{ python_module_name | upper }}_ASSET_TONE=0 makes it the default)
 #   --force     rebuild every file, ignoring the cache
 #   --dry-run   report what would happen, write nothing
 
-# Build compressed photo cache from RAW_ASSETS_DIR (NEF→JPG, downscale, expose)
+# Build the compressed image cache from the stocks in .env (NEF→JPG, downscale, expose)
 [group('data')]
 prepare-assets *flags:
     uv run python scripts/prepare_assets.py {{ '{{flags}}' }}
@@ -250,8 +254,8 @@ alias add-asset := add-photo
 add-photo file:
     @mkdir -p "publication/assets/$(dirname {{ '{{file}}' }})"
 {% if not workspace_location_external %}    @cp "_workspace/output/assets/{{ '{{file}}' }}" "publication/assets/{{ '{{file}}' }}"
-{% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
-    @cp "${WORKSPACE_ROOT}/output/assets/{{ '{{file}}' }}" "publication/assets/{{ '{{file}}' }}"
+{% else %}    @test -n "${{ python_module_name | upper }}_WORKSPACE_ROOT" || (echo "{{ python_module_name | upper }}_WORKSPACE_ROOT is empty"; exit 1)
+    @cp "${{ python_module_name | upper }}_WORKSPACE_ROOT/output/assets/{{ '{{file}}' }}" "publication/assets/{{ '{{file}}' }}"
 {% endif %}    @echo "✓ Copied: publication/assets/{{ '{{file}}' }}"
     @echo "  Typst:  image(\"../../assets/{{ '{{file}}' }}\")"
 
@@ -281,11 +285,11 @@ distclean: clean
 nuke: distclean
 {% if not workspace_location_external %}    rm -rf _workspace/*
     @mkdir -p _workspace/output/figures _workspace/output/tables{% if include_typst %} _workspace/output/assets{% endif %}
-{% else %}    @test -n "${WORKSPACE_ROOT}" || (echo "WORKSPACE_ROOT is empty"; exit 1)
-    @test "${WORKSPACE_ROOT}" != "/" || (echo "Refusing to clean /"; exit 1)
-    @test "${WORKSPACE_ROOT}" != "$HOME" || (echo "Refusing to clean HOME"; exit 1)
-    @test "${WORKSPACE_ROOT}" != "${HOME}/data" || (echo "Refusing to clean ${HOME}/data"; exit 1)
-    @test -d "${WORKSPACE_ROOT}" || (echo "Workspace not found"; exit 1)
-    rm -rf "${WORKSPACE_ROOT:?}"/*
+{% else %}    @test -n "${{ python_module_name | upper }}_WORKSPACE_ROOT" || (echo "{{ python_module_name | upper }}_WORKSPACE_ROOT is empty"; exit 1)
+    @test "${{ python_module_name | upper }}_WORKSPACE_ROOT" != "/" || (echo "Refusing to clean /"; exit 1)
+    @test "${{ python_module_name | upper }}_WORKSPACE_ROOT" != "$HOME" || (echo "Refusing to clean HOME"; exit 1)
+    @test "${{ python_module_name | upper }}_WORKSPACE_ROOT" != "${HOME}/data" || (echo "Refusing to clean ${HOME}/data"; exit 1)
+    @test -d "${{ python_module_name | upper }}_WORKSPACE_ROOT" || (echo "Workspace not found"; exit 1)
+    rm -rf "{{ '${' }}{{ python_module_name | upper }}_WORKSPACE_ROOT:?}"/*
     @echo "✓ Workspace cleaned."
 {% endif %}    @echo "✓ Factory Reset. Run 'just setup' to start fresh."

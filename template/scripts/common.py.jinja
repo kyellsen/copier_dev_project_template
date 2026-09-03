@@ -1,0 +1,204 @@
+"""Shared utilities for developer scripts."""
+
+{% set reads_env = workspace_location_external or include_photo_pipeline %}{% if reads_env %}import os
+{% endif %}import subprocess
+import sys
+{% if include_photo_pipeline %}from dataclasses import dataclass
+{% endif %}from pathlib import Path
+
+{% if reads_env %}from dotenv import load_dotenv
+
+{% endif %}# The repository root, resolved from this file's location. Every script imports
+# it from here rather than recomputing it: parents[1] is correct only while the
+# script sits directly in scripts/, and eight copies of that assumption is eight
+# places to fix when one of them moves.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+{% if workspace_location_external %}WORKSPACE_ENV = "{{ python_module_name | upper }}_WORKSPACE_ROOT"
+
+
+def workspace_root() -> Path:
+    """The directory generated data is written to, read from .env.
+
+    Resolved here rather than per script: `prepare_assets.py` wrote its cache
+    into the repository while `freeze.py` read it from outside, because each
+    script decided for itself where the workspace was. One answer, one place.
+    """
+    load_dotenv(PROJECT_ROOT / ".env")
+    configured = os.environ.get(WORKSPACE_ENV, "").strip()
+    if not configured:
+        msg = f"{WORKSPACE_ENV} is not set — copy .env.example to .env and fill in the path."
+        raise RuntimeError(msg)
+    return Path(configured).expanduser().resolve()
+{% else %}
+def workspace_root() -> Path:
+    """The directory generated data is written to.
+
+    A fixed path inside the repository, gitignored. It goes through a function
+    anyway, so that moving the workspace outside the repository later is one
+    edit here rather than one in every script.
+    """
+    return PROJECT_ROOT / "_workspace"
+{% endif %}{% if include_photo_pipeline %}
+
+ENV_PREFIX = "{{ python_module_name | upper }}"
+
+# Names of the image stocks this project draws on, comma-separated in .env.
+# Left unset, the project has a single unnamed stock and reads
+# <PREFIX>_RAW_ASSETS_DIR — which is the ordinary case for one report.
+#
+# **Why in .env and not in code:** a report has one stock and a multi-site study
+# has several, and that is the *only* structural difference between the two
+# asset pipelines. Kept in code it forks the script per project, and the fork is
+# what let the same EXIF fix be written twice, independently, in August 2026.
+ASSET_SOURCES_ENV = f"{ENV_PREFIX}_ASSET_SOURCES"
+
+
+@dataclass(frozen=True)
+class AssetSource:
+    """One stock of original images and the cache built from it.
+
+    Attributes:
+        name: The stock's name, empty for a project that has only one.
+        media_dir: Where the originals are, or None when .env does not say.
+        cache_dir: Where the compressed cache goes.
+        publication_dir: Where photos taken into the document live.
+        enabled: False when the project's pipeline toggle switches it off.
+    """
+
+    name: str
+    media_dir: Path | None
+    cache_dir: Path
+    publication_dir: Path
+    enabled: bool
+
+
+def _media_dir(root: Path) -> Path | None:
+    """The directory holding the originals below a configured root.
+
+    A data project made from `copier_project` keeps its images in `media/`
+    beside `data/`, so a root that has one means that one; a root that points
+    straight at a stock of photos is taken as it stands.
+    """
+    if not root.exists():
+        return None
+    nested = root / "media"
+    return nested if nested.is_dir() else root
+
+
+def asset_sources() -> list[AssetSource]:
+    """The image stocks declared in .env, in the order they are declared."""
+    load_dotenv(PROJECT_ROOT / ".env")
+    names = [n.strip() for n in os.environ.get(ASSET_SOURCES_ENV, "").split(",") if n.strip()]
+    workspace = workspace_root()
+    publication = PROJECT_ROOT / "publication" / "assets"
+
+    if not names:
+        configured = os.environ.get(f"{ENV_PREFIX}_RAW_ASSETS_DIR", "").strip()
+        root = Path(configured).expanduser().resolve() if configured else None
+        return [
+            AssetSource(
+                name="",
+                media_dir=_media_dir(root) if root else None,
+                cache_dir=workspace / "output" / "assets",
+                publication_dir=publication,
+                enabled=True,
+            )
+        ]
+
+    sources = []
+    for name in names:
+        configured = os.environ.get(f"{ENV_PREFIX}_{name.upper()}_ROOT", "").strip()
+        root = Path(configured).expanduser().resolve() if configured else None
+        toggle = os.environ.get(f"{ENV_PREFIX}_PIPELINE_{name.upper()}", "1").strip()
+        sources.append(
+            AssetSource(
+                name=name,
+                media_dir=_media_dir(root) if root else None,
+                cache_dir=workspace / name / "assets",
+                publication_dir=publication / name,
+                enabled=toggle not in ("0", "false", "no"),
+            )
+        )
+    return sources
+{% endif %}
+
+class Colors:
+    """ANSI color codes for terminal output."""
+
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+
+
+def print_header(msg: str) -> None:
+    """Print a bold header message."""
+    print(f"\n{Colors.HEADER}{Colors.BOLD}🚀 {msg}{Colors.ENDC}")
+
+
+def print_step(msg: str) -> None:
+    """Print a step indicator message."""
+    print(f"\n{Colors.OKCYAN}👉 {msg}{Colors.ENDC}")
+
+
+def print_success(msg: str) -> None:
+    """Print a success message."""
+    print(f"{Colors.OKGREEN}✅ {msg}{Colors.ENDC}")
+
+
+def print_warning(msg: str) -> None:
+    """Print a warning message."""
+    print(f"{Colors.WARNING}⚠️  {msg}{Colors.ENDC}")
+
+
+def print_error(msg: str) -> None:
+    """Print an error message to stderr."""
+    print(f"{Colors.FAIL}❌ {msg}{Colors.ENDC}", file=sys.stderr)
+
+
+def run_command(
+    command: list[str],
+    cwd: Path | str | None = None,
+    check: bool = True,
+    env: dict[str, str] | None = None,
+    capture_output: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """Run a subprocess command safely."""
+    cmd_str = " ".join(command)
+    try:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            check=check,
+            env=env,
+            text=True,
+            capture_output=capture_output,
+        )
+        return result
+    except subprocess.CalledProcessError as e:
+        print_error(f"Command failed with exit code {e.returncode}: {cmd_str}")
+        if e.stderr:
+            print_error(e.stderr.strip())
+        if check:
+            sys.exit(e.returncode)
+        raise e
+    except FileNotFoundError:
+        print_error(f"Command not found in PATH: {command[0]}")
+        if check:
+            sys.exit(1)
+        raise
+
+
+def fmt_duration(seconds: float) -> str:
+    """Format seconds into a human-readable string (e.g. '1.2s' or '2m 3.4s')."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes = int(seconds // 60)
+    secs = seconds % 60
+    return f"{minutes}m {secs:.1f}s"
