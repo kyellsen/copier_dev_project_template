@@ -1,4 +1,9 @@
-"""Code quality check using the pipeline engine. Called by: just check"""
+"""The static quality gate, using the pipeline engine. Called by: just check
+
+Static only — no tests run here. The tiers are composed in the justfile
+(`ci: check test-all`), because a CI mode here meant the script carried a second
+copy of the tier list, and the copy that drifts is the one nobody reads.
+"""
 
 import hashlib
 import shutil
@@ -151,8 +156,6 @@ def make_cmd_runner(cmd: list[str], allowed_codes: set[int] | None = None) -> Ca
 
 
 def main() -> None:
-    is_ci = "--ci" in sys.argv
-
     all_stages: list[tuple[str, Callable[[], int | None]]] = [
         ("Canon Integrity", check_canon),
         ("Copier Source", check_copier_source),
@@ -170,60 +173,6 @@ def main() -> None:
     # the stage; one that gains it later gets the stage without an edit here.
     if PUBLICATION.is_dir():
         all_stages.append(("Typst Format Check", check_typst_format))
-
-    if is_ci:
-        all_stages.extend(
-            [
-                (
-                    "Unit Tests",
-                    make_cmd_runner(
-                        [
-                            "uv",
-                            "run",
-                            "pytest",
-                            "tests/unit",
-                            "-m",
-                            "unit",
-                            "-q",
-                            "-rs",
-                        ],
-                        allowed_codes={0, 5},
-                    ),
-                ),
-                (
-                    "Integration Tests",
-                    make_cmd_runner(
-                        [
-                            "uv",
-                            "run",
-                            "pytest",
-                            "tests/integration",
-                            "-m",
-                            "integration",
-                            "-q",
-                            "-rs",
-                        ],
-                        allowed_codes={0, 5},
-                    ),
-                ),
-                (
-                    "System Tests",
-                    make_cmd_runner(
-                        [
-                            "uv",
-                            "run",
-                            "pytest",
-                            "tests/system",
-                            "-m",
-                            "system",
-                            "-q",
-                            "-rs",
-                        ],
-                        allowed_codes={0, 5},
-                    ),
-                ),
-            ]
-        )
 
     passed = run_pipeline(
         all_stages=all_stages,

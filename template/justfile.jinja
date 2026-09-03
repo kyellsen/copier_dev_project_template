@@ -148,20 +148,23 @@ test-system:
 
 alias t := test
 
-# The everyday test run: unit + integration
+# The everyday run, and what pre-push runs: unit + integration
 [group('release')]
 test: test-unit test-int
 
-# Everything including the slow system tests
+# Every tier a machine can run — hardware and manual tiers never go here
 [group('release')]
 test-all: test-unit test-int test-system
 
 # === CI Pipeline ===
 
-# What CI runs — same checks as 'just check', machine-readable output
+# Composition, not a mode: the tier list lives in the recipes above and nowhere
+# else. This used to be a CI mode inside check.py, which meant the script
+# carried a second copy of it — and the copy that drifts is the one nobody reads.
+
+# The CI entry point: the gate, then every tier a machine can run
 [group('release')]
-ci:
-    @uv run python scripts/check.py --ci
+ci: check test-all
 
 # === Interactive ===
 
