@@ -101,18 +101,27 @@ workspace_location_external:
   default: false
 
 # Planning files of a software project: VISION.md carries the why (goal, north
-# star), ROADMAP.md the when (milestones). A report and a thesis have neither —
-# their goal stands in the commission, their date in the deadline, and both
-# belong in the file, not in the repository. So the question is not asked there
-# at all: offering planning files to a Gutachten is the question the wrong way
-# round, and a "no" that has to be remembered every time is a "yes" waiting to
-# happen. The canon lists both files as optional, so a repository without them
-# is in order, and no gate looks for them.
+# star), ROADMAP.md the when (milestones). A report usually has neither — its
+# goal stands in the commission, its date in the deadline, and both belong in
+# the file, not in the repository. So the default is derived: yes for code, no
+# for a report or a thesis. That default is what the Gutachten incident needed —
+# it carried VISION.md because the question defaulted to yes and nobody thought
+# about it.
+#
+# The question is nevertheless asked every time, and `when:` is deliberately
+# absent. A suppressed question does not merely default — copier drops the
+# recorded answer, and a `true` already in an answers file turns into a deletion
+# on the next update. Measured 2026-09-03 on ba_ks, a thesis that does plan in
+# the repository: correcting project_kind to `thesis` removed ROADMAP.md and
+# VISION.md, 159 lines, silently. Answering "no" costs one keystroke; noticing
+# a deletion inside an update diff costs rather more.
+#
+# The canon lists both files as optional, so a repository without them is in
+# order, and no gate looks for them.
 include_vision_roadmap:
   type: bool
   help: "Include structured VISION.md and ROADMAP.md files for project planning and AI-agent guidance?"
   default: "{% if project_kind == 'code' %}true{% else %}false{% endif %}"
-  when: "{{ project_kind == 'code' }}"
 
 include_license:
   type: bool

@@ -83,9 +83,27 @@ it. That happened, and the files were deleted by hand afterwards.
 
 Today only `include_vision_roadmap` derives from it: planning files are a
 software project's, a report's goal stands in the commission and its date in the
-deadline. For `report` and `thesis` the question is not asked at all, because a
-"no" that has to be remembered every time is a "yes" waiting to happen. The
-canon lists both files as optional, so a repository without them is in order.
+deadline. The canon lists both files as optional, so a repository without them
+is in order.
+
+**Derive the default, not the question.** `include_vision_roadmap` had a `when:`
+that suppressed it entirely for `report` and `thesis`. That is one step too far,
+and the step costs files: a suppressed question does not fall back to its
+default, copier **drops the recorded answer**, so a `true` already written in an
+answers file becomes a deletion on the next update. Measured 2026-09-03 on
+`ba_ks` — a thesis that genuinely plans in the repository — correcting
+`project_kind` from `code` to `thesis` deleted `ROADMAP.md` and `VISION.md`,
+159 lines, as part of a routine `copier update`.
+
+The Gutachten incident that motivated the `when:` is fully answered by the
+derived default alone: it carried VISION.md because the question defaulted to
+**yes**, not because it was asked. With the default at `false` nobody has to
+remember a "no", so the objection that "a 'no' that has to be remembered every
+time is a 'yes' waiting to happen" no longer applies.
+
+**Why it generalises:** a `when:` clause is not a default, it is an assertion
+that the answer can never legitimately differ. Reserve it for questions where
+that is true.
 
 `include_precommit` below is the obvious next candidate — its table says the
 same thing in prose — but it stays a real question for now: a code repository
