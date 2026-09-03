@@ -131,6 +131,12 @@ welche für MINT-Publikationen exzellent geeignet sind, und verzichtet auf unnö
 // Zahlen & Einheiten lassen sich DIN-konform mit unify oder den data-helpers setzen:
 // Beispiel: #qty("42.5", "kN") oder #val(res.force_max)
 
-// === Literaturverzeichnis ===
+{% if project_kind == 'code' %}// === Literaturverzeichnis ===
 #heading(numbering: none, outlined: true)[Literaturverzeichnis]
 #bibliography("literature/references.bib", title: none, style: "apa")
+{% else %}// === Literaturverzeichnis ===
+// Kein Verzeichnis hier: das Overlay ersetzt diese Datei und nimmt den
+// Zitat-Korpus als `standard-bib` aus dem Bausteinpaket. Eine literature/
+// references.bib entsteht in einem solchen Projekt gar nicht erst — Zotero ist
+// dort die einzige Quelle für Quellen.
+{% endif %}
