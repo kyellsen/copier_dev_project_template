@@ -1,7 +1,10 @@
-"""Pipeline execution engine for CLI scripts.
+"""Runs a list of stages and prints the summary with timings. Used by check.py.
 
-Provides the `run_pipeline` orchestration and the beautiful timing
-summary output used by `just check` or `just ci`.
+Named for what it does, not for what calls it. The file was `pipeline.py`, which
+read as the implementation behind `just pipeline` -- a recipe it has nothing to
+do with. In a project that also orchestrates data pipelines the name was taken
+three times over: this engine, the per-experiment orchestrators, and the script
+behind the recipe.
 """
 
 import time

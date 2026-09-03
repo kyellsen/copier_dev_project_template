@@ -14,7 +14,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from common import PROJECT_ROOT
-from pipeline import run_pipeline
+from runner import run_pipeline
 
 SRC = PROJECT_ROOT / "src"
 PUBLICATION = PROJECT_ROOT / "publication"
