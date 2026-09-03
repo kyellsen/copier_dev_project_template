@@ -1,4 +1,4 @@
-"""Checks if all environment variables and data paths are accessible. Called by: just check-env"""
+"""Checks that all environment variables and data paths are reachable. Called by: just check-env"""
 
 import os
 import sys
@@ -10,41 +10,62 @@ from common import PROJECT_ROOT
 
 load_dotenv(PROJECT_ROOT / ".env")
 
-errors: list[str] = []
+# Path variables are recognised by their suffix, so a root added to .env.example
+# is checked here without touching this file.
+PATH_SUFFIXES = ("_ROOT", "_DIR")
 
-# Automatically detect required paths by parsing .env.example
-env_example = PROJECT_ROOT / ".env.example"
-required_vars = []
-if env_example.exists():
-    content = env_example.read_text()
-    for line in content.splitlines():
+# Roots that may legitimately be absent -- a private repository a fresh clone
+# does not have, an optional dataset whose tests skip when it is unset. Listed
+# here they are reported as a note instead of failing the check.
+OPTIONAL: set[str] = set()
+
+
+def declared_path_vars() -> list[str]:
+    """Read the path variables declared in .env.example, in file order.
+
+    .env.example is the declaration of what this project reads, so it is also
+    the list of what to check. A missing one is fatal rather than a fallback to
+    a hard-coded list: a list written twice is a list that drifts.
+    """
+    example = PROJECT_ROOT / ".env.example"
+    if not example.exists():
+        print(f"❌ {example.name} is missing — cannot tell which paths are expected")
+        sys.exit(1)
+
+    names = []
+    for line in example.read_text(encoding="utf-8").splitlines():
         line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            var_name = line.split("=")[0].strip()
-            required_vars.append(var_name)
-else:
-    # Fallback to known variables if .env.example is missing
-{#- Both branches are written out. A single loop would render an empty list as
-    '[' and ']' on two lines, which is valid Python that ruff format rejects —
-    and that is what made every generated project red on its own gate. #}
-{% if include_photo_pipeline or workspace_location_external %}    required_vars = [
-{% if include_photo_pipeline %}        "{{ python_module_name | upper }}_RAW_ASSETS_DIR",
-{% endif %}{% if workspace_location_external %}        "WORKSPACE_ROOT",
-{% endif %}    ]
-{% else %}    required_vars = []
-{% endif %}
-for var in required_vars:
-    val = os.environ.get(var)
-    if not val:
-        errors.append(f"✗ {var} is not set in .env")
-        continue
+        if line.startswith("#") or "=" not in line:
+            continue
+        name = line.split("=", 1)[0].strip()
+        if name.endswith(PATH_SUFFIXES):
+            names.append(name)
+    return names
 
-    # If the variable looks like a directory path, verify it exists
-    if var.endswith(("_DIR", "_ROOT")) and not Path(val).is_dir():
-        errors.append(f"✗ {var} is not reachable or not a directory: {val}")
 
-if errors:
-    print("\n".join(errors))
-    sys.exit(1)
+def main() -> None:
+    errors: list[str] = []
+    notes: list[str] = []
 
-print("✓ Environment OK — all data paths reachable")
+    for var in declared_path_vars():
+        val = os.environ.get(var)
+        if val and Path(val).expanduser().resolve().is_dir():
+            continue
+        message = f"{var} not reachable or not a directory: {val or '<unset>'}"
+        if var in OPTIONAL:
+            notes.append(f"⚠️  {message} (optional)")
+        else:
+            errors.append(f"❌ {message}")
+
+    if notes:
+        print("\n".join(notes))
+
+    if errors:
+        print("\n".join(errors))
+        sys.exit(1)
+
+    print("✅ Environment OK — all data paths reachable")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,14 +1,75 @@
 """Project setup script. Called by: just setup"""
 
+import shutil
 import subprocess
+import sys
 
 from common import PROJECT_ROOT
 
+# Tools that have to exist before `uv sync` can do anything useful. Checked up
+# front rather than letting the first subprocess fail on its own: that route
+# reports one missing tool per run, so a fresh machine needs as many attempts as
+# it is missing tools.
+PREREQUISITES: list[tuple[str, str, str]] = [
+    ("git", "Git", "https://git-scm.com/downloads"),
+    ("just", "just", "https://just.systems/man/en/installation.html"),
+    ("uv", "uv", "https://docs.astral.sh/uv/getting-started/installation/"),
+{% if include_typst %}    ("typst", "Typst", "https://github.com/typst/typst#installation"),
+{% endif %}]
+
+# What to type, per platform -- a URL alone still means reading an install page.
+# A table rather than a branch per tool: adding one is a dict entry, not code.
+INSTALL_HINTS: dict[str, dict[str, str]] = {
+    "git": {
+        "Fedora": "sudo dnf install git",
+        "Ubuntu/Debian": "sudo apt install git",
+        "Windows": "winget install --id Git.Git -e",
+        "macOS": "brew install git",
+    },
+    "just": {
+        "Fedora": "sudo dnf install just",
+        "Ubuntu/Debian": "sudo apt install just",
+        "Windows": "winget install just",
+        "macOS": "brew install just",
+    },
+    "uv": {
+        "Linux": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+        "Windows": 'powershell -c "irm https://astral.sh/uv/install.ps1 | iex"',
+        "macOS": "brew install uv",
+    },
+{% if include_typst %}    "typst": {
+        "Fedora": "sudo dnf install typst",
+        "Linux": "cargo install --locked typst-cli",
+        "Windows": "winget install typst",
+        "macOS": "brew install typst",
+    },
+{% endif %}}
+
+
+def check_prerequisites() -> None:
+    """Exit with install instructions if a required command is not on PATH."""
+    missing = [entry for entry in PREREQUISITES if shutil.which(entry[0]) is None]
+    if not missing:
+        print("✅ All system prerequisites found")
+        return
+
+    print("Missing system prerequisites:\n")
+    for cmd, name, url in missing:
+        print(f"  ❌ {name} not found — see {url}")
+        for platform, command in INSTALL_HINTS.get(cmd, {}).items():
+            print(f"       {platform:<16} {command}")
+
+    print("\nInstall the missing tools and re-run: just setup")
+    sys.exit(1)
+
 
 def main() -> None:
+    # 0. Check system prerequisites
+    check_prerequisites()
+
     # 1. Install dependencies
     subprocess.run(["uv", "sync"], check=True, cwd=PROJECT_ROOT)
-    print("✓ Dependencies installed")
+    print("✅ Dependencies installed")
 {% if include_external_data %}
     # 2. Create .env if missing
     env_file = PROJECT_ROOT / ".env"
@@ -20,9 +81,9 @@ def main() -> None:
     # 3. Create workspace directories
     for subdir in ["output/figures", "output/tables"]:
         (PROJECT_ROOT / "_workspace" / subdir).mkdir(parents=True, exist_ok=True)
-    print("✓ Workspace directory ready (_workspace/)")
+    print("✅ Workspace directory ready (_workspace/)")
 {% endif %}
-    print("✓ Setup complete")
+    print("✅ Setup complete")
 
 
 if __name__ == "__main__":
