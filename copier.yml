@@ -102,19 +102,13 @@ workspace_location_external:
 
 # Planning files of a software project: VISION.md carries the why (goal, north
 # star), ROADMAP.md the when (milestones). A report usually has neither — its
-# goal stands in the commission, its date in the deadline, and both belong in
-# the file, not in the repository. So the default is derived: yes for code, no
-# for a report or a thesis. That default is what the Gutachten incident needed —
-# it carried VISION.md because the question defaulted to yes and nobody thought
-# about it.
+# goal stands in the commission, its date in the deadline. Hence the derived
+# default: yes for code, no for a report or a thesis.
 #
 # The question is nevertheless asked every time, and `when:` is deliberately
 # absent. A suppressed question does not merely default — copier drops the
 # recorded answer, and a `true` already in an answers file turns into a deletion
-# on the next update. Measured 2026-09-03 on ba_ks, a thesis that does plan in
-# the repository: correcting project_kind to `thesis` removed ROADMAP.md and
-# VISION.md, 159 lines, silently. Answering "no" costs one keystroke; noticing
-# a deletion inside an update diff costs rather more.
+# on the next update. → LOGBOOK.md, 2026-09-03.
 #
 # The canon lists both files as optional, so a repository without them is in
 # order, and no gate looks for them.
