@@ -20,7 +20,25 @@ jobs:
 
       - name: Install just
         uses: extractions/setup-just@v2
-
+{% if include_typst %}
+      # typstyle is a standalone binary, not a uv dependency: the gate's "Typst
+      # Format Check" stage shells out to it and exits 1 when it is absent, so
+      # without this step 'just ci' fails before it reaches a single test.
+      #
+      # Pinned rather than "latest" on purpose -- a newer typstyle may format
+      # differently, and CI would go red for something no commit caused. Keep
+      # this in step with the locally installed version (brew install typstyle).
+      - name: Install typstyle
+        env:
+          TYPSTYLE_VERSION: "0.15.0"
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL "https://github.com/Enter-tainer/typstyle/releases/download/v${TYPSTYLE_VERSION}/typstyle-x86_64-unknown-linux-gnu" \
+            -o "$HOME/.local/bin/typstyle"
+          chmod +x "$HOME/.local/bin/typstyle"
+          "$HOME/.local/bin/typstyle" --version
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+{% endif %}
       - name: Install dependencies
         run: uv sync --locked
 

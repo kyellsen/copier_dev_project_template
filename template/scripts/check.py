@@ -13,6 +13,14 @@ from pipeline import run_pipeline
 SRC = PROJECT_ROOT / "src"
 PUBLICATION = PROJECT_ROOT / "publication"
 
+# The hand-written Typst. Anything a freeze step generates, and anything an
+# overlay vendors into publication/lib, is deliberately not listed here.
+TYPST_HANDWRITTEN = [
+    PUBLICATION / "main.typ",
+    PUBLICATION / "config.typ",
+    PUBLICATION / "chapters",
+]
+
 # Stages that record a failure but do not abort the run, so their siblings still
 # report. "Ruff Format Check" belongs here: it is the most trivial check in the
 # gate, and aborting on it hides the lint and type errors one actually needs.
@@ -96,12 +104,17 @@ def check_copier_source() -> None:
 
 
 def check_typst_format() -> None:
-    """Fail if anything under publication/ is not typstyle-formatted.
+    """Fail if a hand-written Typst file is not typstyle-formatted.
 
     This lives in the gate rather than beside it. `just check-typst` ran the
     same command, but nothing called it -- not `just check`, not `just ci` --
     so a Typst project could sit unformatted indefinitely and only find out
     when someone ran the recipe by hand.
+
+    Only the hand-written files are checked. A freeze step writes generated
+    tables and figures into publication/, and an overlay vendors its packages
+    into publication/lib -- formatting either would be undone on the next
+    generate, or would edit what is not ours.
 
     typstyle is a standalone binary, not a uv dependency, so a missing one is
     an environment problem and says so instead of failing the formatting.
@@ -114,7 +127,11 @@ def check_typst_format() -> None:
         print("  in a hook: PATH=/home/linuxbrew/.linuxbrew/bin:$PATH")
         sys.exit(1)
 
-    result = subprocess.run(["typstyle", "--check", str(PUBLICATION)], cwd=PROJECT_ROOT)
+    targets = [str(p) for p in TYPST_HANDWRITTEN if p.exists()]
+    if not targets:
+        return
+
+    result = subprocess.run(["typstyle", "--check", *targets], cwd=PROJECT_ROOT)
     if result.returncode != 0:
         print("  fix: just fix   (or: typstyle -i publication/)")
         sys.exit(result.returncode)
