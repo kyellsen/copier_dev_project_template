@@ -170,4 +170,3 @@ Test names should describe the **expected behavior**, not the implementation det
 
 - `AGENTS.md` §4 — Testing Rules (markers, directory structure)
 - `pyproject.toml` `[tool.pytest.ini_options]` — Registered markers
-- `docs/development/milestones/v0.3.0_sensor_loaders.md` — Gatekeeper test specifications
