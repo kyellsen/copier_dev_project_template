@@ -19,6 +19,6 @@ description: Audit test code for quality, correct markers, and anti-patterns
      - Unit: No I/O, no filesystem access, no network calls
      - Integration: Real filesystem or external data, self-contained, skip when data unavailable
      - System: Full pipeline end-to-end
-   - **Gatekeeper Tests (§5):** Verify TMS parser validation tests exist and compare against vendor CSV.
-7. Present your findings in your chat response or as an artifact. **CRITICAL:** Do NOT write report files to the repository.
+   - **Gatekeeper Tests:** Where the project reads a foreign binary or vendor format, verify a test exists that compares the parser's output against the vendor's own export. Skip this point if the project has no such format.
+7. Present your findings in your chat response. **CRITICAL:** Do NOT write report files to the repository.
 8. Ask the user if they'd like you to start fixing based on the audit results.
