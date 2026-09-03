@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Checks the commit message against the house convention (Conventional Commits).
+#
+# Versioned here instead of in .git/hooks so it survives a fresh clone;
+# 'just install-hooks' points core.hooksPath at this directory.
+#
+# This hook is the convention. docs/development/commit.md explains it in prose,
+# and the two are changed together -- a rule that lives only in prose has
+# nothing keeping it honest, and the stale half is the one the next session
+# reads first. That is not hypothetical: ba_ks shipped nineteen commits with the
+# '!' in the wrong place because its own example showed it there.
+#
+# Unlike pre-commit, this one costs milliseconds and rejects only the line you
+# just wrote yourself. That matters: a gate that fails for reasons outside your
+# control is the one that teaches --no-verify.
+#
+# No PATH line here on purpose -- this hook is plain bash and coreutils, so it
+# works in a non-login shell without reaching into the Homebrew tree.
+set -euo pipefail
+
+MSG_FILE="$1"
+
+TYPES="feat|fix|docs|refactor|chore|test|build|ci|perf|release"
+MAX_SUBJECT=72
+GUIDE="docs/development/commit.md"
+
+# Strip comments and everything below the --- >8 --- scissors line that
+# 'git commit --verbose' appends, then take the first non-empty line.
+BODY="$(sed -e '/^# ------------------------ >8 ------------------------$/,$d' \
+            -e '/^#/d' "$MSG_FILE")"
+SUBJECT="$(printf '%s\n' "$BODY" | grep -m1 -v '^[[:space:]]*$' || true)"
+
+# git generates these itself; they are not ours to format.
+case "$SUBJECT" in
+    Merge\ *|Revert\ *|fixup!\ *|squash!\ *|amend!\ *) exit 0 ;;
+esac
+
+# An empty message aborts the commit anyway -- let git say so in its own words.
+[ -n "$SUBJECT" ] || exit 0
+
+errors=()
+
+if [[ "$SUBJECT" =~ ^($TYPES)\!\( ]]; then
+    errors+=("the '!' belongs AFTER the scope: 'refactor(config)!: ...', not 'refactor!(config): ...'
+    Why: every changelog parser reads it there. The wrong form parses as an
+    ordinary commit, so the breaking change vanishes silently.")
+elif ! [[ "$SUBJECT" =~ ^($TYPES)(\([a-z0-9._/-]+\))?\!?:\  ]]; then
+    errors+=("does not start with '<type>(<scope>): ' or '<type>: '
+    Allowed types: ${TYPES//|/, }")
+fi
+
+if [ "${#SUBJECT}" -gt "$MAX_SUBJECT" ]; then
+    errors+=("subject is ${#SUBJECT} characters, the limit is $MAX_SUBJECT")
+fi
+
+if [[ "$SUBJECT" =~ \.$ ]]; then
+    errors+=("subject ends with a full stop")
+fi
+
+if [[ "$SUBJECT" =~ :\ [A-Z][a-z] ]]; then
+    errors+=("subject starts with a capital letter -- use the imperative lowercase form")
+fi
+
+# The second line must be blank when a body follows. Without this, a body glued
+# straight onto the subject becomes part of it, and 'git log --oneline' turns
+# into a wall of text -- two ba_ks commits carry 800-character subjects for
+# exactly this reason.
+SECOND="$(printf '%s\n' "$BODY" | sed -n '2p')"
+THIRD_ON="$(printf '%s\n' "$BODY" | sed -n '3,$p' | grep -c '[^[:space:]]' || true)"
+if [ -n "$SECOND" ] && [ "$THIRD_ON" -gt 0 ]; then
+    errors+=("no blank line between subject and body")
+fi
+
+[ "${#errors[@]}" -eq 0 ] && exit 0
+
+printf '\n\033[1;31m✗ Commit message rejected\033[0m\n\n'
+printf '  \033[2m%s\033[0m\n\n' "$SUBJECT"
+for e in "${errors[@]}"; do
+    printf '  \033[31m•\033[0m %s\n' "$e"
+done
+printf '\n  The convention: \033[1m%s\033[0m\n' "$GUIDE"
+printf '  Your message is kept -- reuse it with:\n'
+printf '    \033[1mgit commit -e -F .git/COMMIT_EDITMSG\033[0m\n\n'
+
+exit 1

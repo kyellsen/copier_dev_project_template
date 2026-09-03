@@ -32,20 +32,26 @@ setup:
 {% if include_precommit %}
 # === Git Hooks ===
 
-# The hook is versioned in scripts/git-hooks and wired in with core.hooksPath,
-# so it survives a fresh clone and is reviewed like any other file. It runs
-# 'just check' — the same command you run — and stashes nothing: the gate judges
-# the working tree, so what you see is what is tested. The pre-commit framework
-# does the opposite; its red hook is only a suspicion because it hides unstaged
-# work, and the honest reaction to that is --no-verify, which voids the gate.
+# Two hooks, versioned in scripts/git-hooks and wired in with core.hooksPath, so
+# they survive a fresh clone and are reviewed like any other file:
+#
+#   pre-commit   runs 'just check' — the same command you run — and stashes
+#                nothing: the gate judges the working tree, so what you see is
+#                what is tested. The pre-commit framework does the opposite; its
+#                red hook is only a suspicion because it hides unstaged work, and
+#                the honest reaction is --no-verify, which voids the gate.
+#   commit-msg   checks the message against docs/development/commit.md. It costs
+#                milliseconds and rejects only the line you just wrote yourself,
+#                which is why it never becomes the reason to reach for
+#                --no-verify.
 
-# Wire the versioned git hook into this clone (setup does it too)
+# Wire the versioned git hooks into this clone (setup does it too)
 [group('setup')]
 install-hooks:
     git config core.hooksPath scripts/git-hooks
     @echo "✅ core.hooksPath → scripts/git-hooks"
 
-# Remove the git hook from this clone
+# Remove the git hooks from this clone
 [group('setup')]
 uninstall-hooks:
     git config --unset core.hooksPath || true
