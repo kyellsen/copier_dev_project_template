@@ -20,41 +20,6 @@ __pycache__/
 _workspace/
 {% endif %}
 
-{% if include_latex %}# === LaTeX ===
-publication/build/
-
-# LaTeX aux files (falls außerhalb build/ landen)
-*.aux
-*.bbl
-*.bcf
-*.blg
-*.fdb_latexmk
-*.fls
-*.lof
-*.lot
-*.log
-*.lol
-*.out
-*.run.xml
-*.synctex.gz
-*.synctex(busy)
-*.toc
-*.nav
-*.snm
-*.xdv
-*.glg
-*.glo
-*.gls
-*.ist
-*.acn
-*.acr
-*.alg
-*.nlo
-*.nls
-_minted*
-*.mw
-{% endif %}
-
 # === Typst ===
 publication/*.pdf
 *.pdf
@@ -71,3 +36,15 @@ data/raw/*
 !data/raw/.gitkeep
 data/test/*
 !data/test/.gitkeep
+
+# Scrap, drafts, handovers — never committed (canon: documentation discipline)
+.tmp/
+
+# What the editor writes for a session it is driving: screenshots and plan
+# documents. Same class as .tmp/ above — a plan is what somebody intended on one
+# afternoon, and a stale one in the tree reads like a description of the project
+.nimbalyst/
+nimbalyst-local/
+
+# === Claude Code (local overrides) ===
+.claude/settings.local.json
