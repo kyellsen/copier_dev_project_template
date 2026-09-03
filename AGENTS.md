@@ -5,9 +5,9 @@ House rules: [`AGENTS.canon.md`](AGENTS.canon.md) (profiles `00-core`,
 This file carries only what is true in *this* repository. The incidents behind
 the rules: [`LOGBOOK.md`](LOGBOOK.md).
 
-`just check` is the gate here: it verifies **both** canon copies — this repo's
-own and the one shipped into every project — and then renders the template for
-real. There is no git hook yet, so run it yourself before committing.
+`just check` is the gate here: it verifies this repo's canon copy and then
+renders the template for real. This repository stands on rung `gate` of the
+hook ladder — `commit-msg` and `pre-commit` run it on every commit.
 
 ## What this repo is
 
