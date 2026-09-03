@@ -22,7 +22,10 @@
 
 ### Key Concepts
 - **Immutability of Raw Data:** Raw data is never modified.
-- **Medallion Architecture:** Data flows from Raw (Bronze) -> Processed (Silver) -> Output (Gold).
+- **Named processing stages:** Data flows from `raw` through `corrected` to
+  `filtered`. Name each stage after what it did to the data — the canon rejects
+  borrowed paradigm names (Bronze/Silver/Gold, Data Lake) because they promise a
+  structure the code does not have.
 
 ---
 
