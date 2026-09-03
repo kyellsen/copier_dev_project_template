@@ -1,4 +1,5 @@
-from pathlib import Path
+{% if workspace_location_external %}import os
+{% endif %}from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -17,8 +18,7 @@ WORKSPACE = PROJECT_ROOT / "_workspace"
 _workspace_root = os.environ.get("WORKSPACE_ROOT")
 if not _workspace_root:
     raise ValueError(
-        "WORKSPACE_ROOT is not set. "
-        "Please copy .env.example to .env and fill in the path."
+        "WORKSPACE_ROOT is not set. Please copy .env.example to .env and fill in the path."
     )
 WORKSPACE = Path(_workspace_root)
 {% endif %}
