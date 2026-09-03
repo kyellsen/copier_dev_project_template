@@ -5,19 +5,14 @@ set dotenv-load
 import? 'project.just'
 
 # === Default ===
-# A bare `just` answers one question: what do I type today? Everything else is
-# one command away. Without this, a first-time reader meets thirty recipes in
-# alphabetical order and cannot tell which three matter.
-# The everyday commands — `just --list` shows all of them, grouped
+# --unsorted preserves the section order of this file, so a first-time reader
+# meets the recipes in the order they are needed rather than alphabetically.
+# The canon fixes this recipe's body; a hand-written summary beside it is a
+# second list of the important verbs, and the copy is the one that goes stale.
+
+# Show all recipes, grouped by section
 default:
-{%- if include_typst %}
-    @echo "  just pub        compile the document"
-    @echo "  just pub-watch  recompile on every save, open in the viewer"
-{%- endif %}
-    @echo "  just check      the quality gate — run it before you commit"
-    @echo "  just fix        auto-format and auto-fix what check complains about"
-    @echo ""
-    @echo "  everything else, grouped by when you need it:  just --list"
+    @just --list --unsorted
 
 # === Setup ===
 alias s := setup
