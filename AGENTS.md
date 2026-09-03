@@ -105,31 +105,42 @@ time is a 'yes' waiting to happen" no longer applies.
 that the answer can never legitimately differ. Reserve it for questions where
 that is true.
 
-`include_precommit` below is the obvious next candidate — its table says the
-same thing in prose — but it stays a real question for now: a code repository
-without a gate is a deliberate choice often enough to be worth the keystroke.
+`git_hooks` below derives its default the same way, and stays a real question
+for the same reason: a code repository without a gate is a deliberate choice
+often enough to be worth the keystroke.
 
-## Where a gate belongs
+## The hook ladder
 
-`include_precommit` is not a taste question. It decides whether a generated
-project commits behind a gate, and the answer differs by what the repository
-produces:
+**The rules live in the canon** — `AGENTS.canon.md`, section "Git hooks": what
+each rung may run, why no test belongs in `pre-commit`, and why a hook may never
+fail for a reason the commit did not cause. This file only says which rung a
+project kind gets.
 
-| Repository produces | `include_precommit` | Why |
+| Rung | Hooks | Default for |
 |---|---|---|
-| **Code** (a library, a pipeline, an app) | `true` | A broken commit is a broken artefact. The gate is fast and judges exactly what the next person will run. |
-| **Text** (a report, a thesis) | `false` | The deliverable is a PDF, and the gate would check Python nobody touched. What protects the document is `just pub-watch` while writing — a compile error surfaces in a second — and `just deliver` / `just submit`, which refuse a dirty tree and compile fresh. A commit there is a save point, not a publication. |
+| `none` | — | nothing; a sandbox or a throwaway |
+| `message` | `commit-msg` | **report**, **thesis** |
+| `gate` | + `pre-commit` → `just check` | — |
+| `full` | + `pre-push` → `just check test` | **code** |
 
-Blocking a save point over a transient state teaches exactly one habit,
-`--no-verify`, and that voids the gate everywhere. It has already happened once
-in `ba_ks`.
+A writing repository gets `message` rather than nothing because the commit
+convention costs milliseconds and judges only the line just typed. It stops
+short of `gate` because there the deliverable is a PDF and the gate would check
+Python nobody touched: what protects the document is `just pub-watch` while
+writing and `just deliver` / `just submit`, which refuse a dirty tree and
+compile fresh. A commit there is a save point, not a publication, and blocking
+a save point over a transient state teaches exactly one habit, `--no-verify` —
+which voids the gate everywhere. That has already happened once in `ba_ks`.
 
-When it is `true`, the hook is **versioned** in `scripts/git-hooks` and wired in
-with `core.hooksPath` — not the `pre-commit` framework. The framework stashes
+`gate` exists for the repositories in between, this one included: a code project
+whose `ci` is only `check`, with no test tiers to add.
+
+The hooks are **versioned** in `scripts/git-hooks` and wired in with
+`core.hooksPath` — never the `pre-commit` framework. The framework stashes
 unstaged work before running, so its verdict describes a tree that never existed;
-the versioned hook judges the working tree as it is. That is also why the
-generated project no longer carries a `pre-commit` dependency at all: the hook
-is nine lines of bash.
+the versioned hooks judge the working tree as it is. That is also why a generated
+project carries no `pre-commit` dependency at all: each hook is a few lines of
+bash, and only the last one calls a `just` verb.
 
 ## Every test tier ships a test
 
