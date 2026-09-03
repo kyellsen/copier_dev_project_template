@@ -6,6 +6,7 @@ copy of the tier list, and the copy that drifts is the one nobody reads.
 """
 
 import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -84,8 +85,13 @@ def check_copier_source() -> None:
     Remote sources are left alone -- they are valid, just not the default.
     Skipped outside a git repository: copier refuses to update there at all, so
     the recorded source is inert. That is the throwaway `just probe` case.
+
+    Skipped in CI for the same reason. The recorded path is a directory on the
+    developer's machine and is never checked out on a runner, so the check can
+    only ever fail there -- and since `ci` is `check test-all`, a failing gate
+    means the runner reaches no test at all.
     """
-    if not (PROJECT_ROOT / ".git").exists():
+    if not (PROJECT_ROOT / ".git").exists() or os.environ.get("CI"):
         return
 
     remote_prefixes = ("git@", "git+", "http://", "https://", "ssh://", "gh:", "gl:")
