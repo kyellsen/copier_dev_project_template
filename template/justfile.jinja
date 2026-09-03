@@ -211,12 +211,9 @@ export-pdf filename:
     @test -f publication/main.pdf || (echo "❌ publication/main.pdf not found. Run 'just pub' first." && exit 1)
     @cp publication/main.pdf "{{ '{{filename}}' }}.pdf"
     @echo "✅ Exported to {{ '{{filename}}' }}.pdf"
-    @if [ -n "$BA_KS_DATA_ROOT" ] && [ -d "$BA_KS_DATA_ROOT/outbox" ]; then \
-        cp publication/main.pdf "$BA_KS_DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf" && \
-        echo "✅ Exported to Nextcloud outbox: $BA_KS_DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf"; \
-    elif [ -n "$DATA_ROOT" ] && [ -d "$DATA_ROOT/outbox" ]; then \
-        cp publication/main.pdf "$DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf" && \
-        echo "✅ Exported to Nextcloud outbox: $DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf"; \
+    @if [ -n "${{ python_module_name | upper }}_DATA_ROOT" ] && [ -d "${{ python_module_name | upper }}_DATA_ROOT/outbox" ]; then \
+        cp publication/main.pdf "${{ python_module_name | upper }}_DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf" && \
+        echo "✅ Exported to outbox: ${{ python_module_name | upper }}_DATA_ROOT/outbox/{{ '{{filename}}' }}.pdf"; \
     fi
 
 # === Assets & Freeze ===
