@@ -92,6 +92,11 @@ check-render:
     done
     grep -q 'canon-pull' "$OUT/justfile" || { echo "❌ the generated project has no canon-pull recipe"; exit 1; }
 
+    # The canon carries LOGBOOK.md as a core file. A project that arrives
+    # without one writes its incidents into AGENTS.md, where they crowd out the
+    # rules — which is exactly what this repository had to unpick for itself.
+    test -f "$OUT/LOGBOOK.md" || { echo "❌ the generated project has no LOGBOOK.md"; exit 1; }
+
     # A justfile broken by Jinja fails here and nowhere else until someone uses it.
     just --justfile "$OUT/justfile" --working-directory "$OUT" --list >/dev/null
 
@@ -186,7 +191,7 @@ check-render:
     test -e "$OUT/scripts/git-hooks/pre-push" \
       || { echo "❌ project_kind=code does not default to git_hooks=full"; exit 1; }
 
-    echo "✅ template renders: no canon shipped, canon-pull present, justfile parses, generated Python compiles, every test tier populated, all four hook rungs correct"
+    echo "✅ template renders: no canon shipped, canon-pull and LOGBOOK.md present, justfile parses, generated Python compiles, every test tier populated, all four hook rungs correct"
 
 # Generate a throwaway project and keep it, for looking at the result by hand
 [group('daily')]
