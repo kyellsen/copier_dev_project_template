@@ -5,7 +5,7 @@
 # 'just install-hooks' points core.hooksPath at this directory.
 #
 # What "green" means is deliberately NOT defined here — 'just check' owns that,
-# and it is the same command a human runs. New checks go into the justfile.
+# and it is the same command a human runs. New checks go into scripts/check.py.
 #
 # Nothing is stashed, so the gate judges the working tree: what you see is what
 # is tested. That is the opposite of the pre-commit framework, whose red hook is

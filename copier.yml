@@ -39,10 +39,10 @@ author_email:
 
 # The base layer already knows that two writing overlays are built on top of it
 # (see include_typst below), so it can ask once what is being built instead of
-# asking that same distinction one flag at a time. Only include_vision_roadmap
-# hangs off it today; the obvious next candidate is include_precommit, whose
-# help text spells out the identical code-vs-text split by hand — see AGENTS.md,
-# "Where a gate belongs".
+# asking that same distinction one flag at a time. Three questions derive their
+# default from it today: include_photo_pipeline, include_vision_roadmap and
+# git_hooks. Each stays a real question — the default carries the usual answer,
+# not an assertion that no other answer is legitimate.
 project_kind:
   type: str
   help: "What does this repository produce?"
@@ -136,13 +136,24 @@ canon_profiles:
   help: "Canon profiles (00-core is for everyone; add 10-python, 20-web, 30-ansible, 40-science)"
   default: "00-core,10-python"
 
-# Code repositories: yes. Writing repositories (a report, a thesis): no --
-# there the gate belongs at 'just pub-watch' while writing and at delivery,
-# not at every save point. See AGENTS.md, "Where a gate belongs".
-include_precommit:
-  type: bool
-  help: "Install a versioned pre-commit hook running 'just check'? (code repos: yes, writing repos: no)"
-  default: false
+# The hook ladder — see AGENTS.canon.md, "Git hooks", which owns the rules.
+# Each level contains the ones below it, and each one adds exactly one thing:
+# commit-msg judges the line you just typed, pre-commit adds the static gate,
+# pre-push adds unit and integration tests. Everything slower or less
+# self-contained stops at CI.
+#
+# Derived from project_kind and asked every time, with no `when:` — same reason
+# as include_vision_roadmap above: a suppressed question drops its recorded
+# answer, so a project on `full` would silently fall back to the default.
+git_hooks:
+  type: str
+  help: "Git hooks: none | message (commit-msg) | gate (+ pre-commit → check) | full (+ pre-push → check test)"
+  choices:
+    "none — sandbox, throwaway": "none"
+    "message — commit-msg only": "message"
+    "gate — commit-msg + pre-commit": "gate"
+    "full — commit-msg + pre-commit + pre-push": "full"
+  default: "{% if project_kind == 'code' %}full{% else %}message{% endif %}"
 
 include_github_actions:
   type: bool

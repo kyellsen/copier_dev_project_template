@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Runs the quality gate and the everyday test tiers before every push.
+#
+# Versioned here instead of in .git/hooks so it survives a fresh clone;
+# 'just install-hooks' points core.hooksPath at this directory.
+#
+# 'just check test' and not 'just ci' on purpose. ci adds test-all, and the
+# tiers it adds are exactly the ones allowed to need a network, a socket, a
+# data root or a warm cache. A push from a train has none of those, and a hook
+# that fails for a reason the push did not cause gets switched off once and
+# stays off. Those tiers therefore stop at CI, which nobody can skip.
+#
+# The PATH line is not optional on this machine. Git runs hooks from a
+# non-login shell, and just, uv, copier and typst all live under the Homebrew
+# tree — without it every push fails with "just: command not found".
+set -euo pipefail
+export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+
+cd "$(git rev-parse --show-toplevel)"
+exec just check test

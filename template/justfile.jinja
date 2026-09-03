@@ -27,23 +27,21 @@ alias s := setup
 setup:
     uv run python scripts/setup.py
     @just canon-pull
-{% if include_precommit %}    @just install-hooks
+{% if git_hooks != 'none' %}    @just install-hooks
 {% endif %}
-{% if include_precommit %}
+{% if git_hooks != 'none' %}
 # === Git Hooks ===
 
-# Two hooks, versioned in scripts/git-hooks and wired in with core.hooksPath, so
-# they survive a fresh clone and are reviewed like any other file:
+# This project stands on rung '{{ git_hooks }}' of the ladder. Every hook is
+# versioned in scripts/git-hooks and wired in with core.hooksPath, so it
+# survives a fresh clone and is reviewed like any other file.
 #
-#   pre-commit   runs 'just check' — the same command you run — and stashes
-#                nothing: the gate judges the working tree, so what you see is
-#                what is tested. The pre-commit framework does the opposite; its
-#                red hook is only a suspicion because it hides unstaged work, and
-#                the honest reaction is --no-verify, which voids the gate.
-#   commit-msg   checks the message against docs/development/commit.md. It costs
-#                milliseconds and rejects only the line you just wrote yourself,
-#                which is why it never becomes the reason to reach for
-#                --no-verify.
+#   commit-msg   the commit convention as a regular expression, milliseconds
+#   pre-commit   'just check' — the static gate, no tests
+#   pre-push     'just check test' — adds unit and integration
+#
+# What each rung may and may not do is a house rule, not a project decision:
+# AGENTS.canon.md, "Git hooks".
 
 # Wire the versioned git hooks into this clone (setup does it too)
 [group('setup')]
