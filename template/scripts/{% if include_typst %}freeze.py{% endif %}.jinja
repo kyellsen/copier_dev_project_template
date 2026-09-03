@@ -53,7 +53,7 @@ def smart_sync(src: Path, dest: Path) -> tuple[int, int, int]:
                 if not src.exists() or not (src / rel).exists():
                     f.unlink()
                     removed += 1
-                    print(f"  ✗ {rel} (removed — not in source)")
+                    print(f"  - {rel} (removed — not in source)")
 
         # Clean up empty directories
         for d in sorted(dest.rglob("*"), reverse=True):
@@ -148,7 +148,7 @@ def main() -> None:
 
     changes = total_added + total_updated + total_removed
     print(
-        f"\n✓ Freeze done: +{total_added} new, ~{total_updated} updated, "
+        f"\n✅ Freeze done: +{total_added} new, ~{total_updated} updated, "
         f"-{total_removed} removed ({total_mb:.1f} MB total)"
     )
 

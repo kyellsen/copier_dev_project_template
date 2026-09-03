@@ -22,7 +22,7 @@ def main() -> None:
         for match in PROJECT_ROOT.rglob(pattern):
             if match.is_dir():
                 shutil.rmtree(match)
-                print(f"  ✗ {match.relative_to(PROJECT_ROOT)}")
+                print(f"  - {match.relative_to(PROJECT_ROOT)}")
                 count += 1
 
     # Remove .pyc files
@@ -31,9 +31,9 @@ def main() -> None:
         count += 1
 
     if count == 0:
-        print("✓ Already clean — nothing to remove")
+        print("✅ Already clean — nothing to remove")
     else:
-        print(f"✓ Removed {count} cache entries")
+        print(f"✅ Removed {count} cache entries")
 
 
 if __name__ == "__main__":

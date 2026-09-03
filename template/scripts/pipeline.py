@@ -69,7 +69,7 @@ def _print_summary(
 
     print(f"\n\n{Colors.BOLD}")
     print(f"{'═' * 60}")
-    print("  📋  FULL PIPELINE SUMMARY")
+    print("  FULL PIPELINE SUMMARY")
     print(f"{'═' * 60}{Colors.ENDC}")
 
     passed_count = 0
@@ -131,10 +131,10 @@ def _print_summary(
 
     if failed_count == 0 and warned_count == 0 and skipped_count_total == 0:
         print(
-            f"\n  {Colors.OKGREEN}{Colors.BOLD}🎉 All {total_stages} stages passed!{Colors.ENDC}\n"
+            f"\n  {Colors.OKGREEN}{Colors.BOLD}✅ All {total_stages} stages passed!{Colors.ENDC}\n"
         )
     elif failed_count > 0:
-        print(f"\n  {Colors.FAIL}{Colors.BOLD}💥 {failed_count} stage(s) failed!{Colors.ENDC}\n")
+        print(f"\n  {Colors.FAIL}{Colors.BOLD}❌ {failed_count} stage(s) failed!{Colors.ENDC}\n")
     elif warned_count > 0 and skipped_count_total == 0:
         print(
             f"\n  {Colors.OKGREEN}{Colors.BOLD}"

@@ -53,7 +53,7 @@ def main() -> None:
             continue
         message = f"{var} not reachable or not a directory: {val or '<unset>'}"
         if var in OPTIONAL:
-            notes.append(f"⚠️  {message} (optional)")
+            notes.append(f"ℹ️  {message} (optional)")  # noqa: RUF001 -- intentional
         else:
             errors.append(f"❌ {message}")
 
