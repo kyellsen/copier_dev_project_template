@@ -63,6 +63,14 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 
+# scripts/common.py and scripts/pipeline.py are siblings of the scripts that
+# import them, not part of the package. Without this they share a section with
+# `{{ python_module_name }}` and isort sorts them alphabetically against it, so
+# the correct import order would depend on the project's name -- and a template
+# cannot ship a file that is already sorted for every possible name.
+[tool.ruff.lint.isort]
+known-local-folder = ["common", "pipeline"]
+
 [tool.mypy]
 python_version = "{{ python_version }}"
 ignore_missing_imports = true

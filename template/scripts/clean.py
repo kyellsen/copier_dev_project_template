@@ -1,9 +1,8 @@
 """Clean up Python caches and temporary files. Called by: just clean"""
 
 import shutil
-from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from common import PROJECT_ROOT
 
 # Directories to delete (relative to project root)
 CACHE_DIRS = [

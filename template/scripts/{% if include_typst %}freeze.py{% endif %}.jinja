@@ -12,7 +12,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from common import PROJECT_ROOT
+
 load_dotenv(PROJECT_ROOT / ".env")
 
 {% if not workspace_location_external %}SOURCE = PROJECT_ROOT / "_workspace" / "output"

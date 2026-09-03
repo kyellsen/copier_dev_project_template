@@ -11,11 +11,9 @@ watcher starts anyway, and the document recompiles forever without a window.
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
-from common import print_error, print_step, print_success
+from common import PROJECT_ROOT, print_error, print_step, print_success
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PUBLICATION_DIR = PROJECT_ROOT / "publication"
 MAIN_TYP = PUBLICATION_DIR / "main.typ"
 MAIN_PDF = PUBLICATION_DIR / "main.pdf"

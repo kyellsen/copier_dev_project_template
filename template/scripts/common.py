@@ -4,6 +4,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+# The repository root, resolved from this file's location. Every script imports
+# it from here rather than recomputing it: parents[1] is correct only while the
+# script sits directly in scripts/, and eight copies of that assumption is eight
+# places to fix when one of them moves.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 class Colors:
     """ANSI color codes for terminal output."""

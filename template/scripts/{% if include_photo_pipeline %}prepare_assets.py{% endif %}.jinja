@@ -29,7 +29,8 @@ import numpy as np
 from dotenv import load_dotenv
 from PIL import Image, ImageOps
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from common import PROJECT_ROOT
+
 WORKSPACE_ASSETS = PROJECT_ROOT / "_workspace" / "output" / "assets"
 HASH_FILE = WORKSPACE_ASSETS / ".asset_hashes.json"
 

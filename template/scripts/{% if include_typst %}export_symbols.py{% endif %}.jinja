@@ -19,7 +19,8 @@ from pathlib import Path
 import {{ python_module_name }} as pkg
 from {{ python_module_name }}.schemas.columns import ColumnDef
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from common import PROJECT_ROOT
+
 PUB_TABLES_DIR = PROJECT_ROOT / "publication" / "tables"
 CHAPTERS_DIR = PROJECT_ROOT / "publication" / "chapters"
 

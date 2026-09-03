@@ -7,9 +7,9 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
+from common import PROJECT_ROOT
 from pipeline import run_pipeline
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC = PROJECT_ROOT / "src"
 PUBLICATION = PROJECT_ROOT / "publication"
 
