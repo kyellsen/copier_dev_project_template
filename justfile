@@ -100,6 +100,17 @@ check-render:
     # A justfile broken by Jinja fails here and nowhere else until someone uses it.
     just --justfile "$OUT/justfile" --working-directory "$OUT" --list >/dev/null
 
+    # The place a project puts its own recipes, so a template update never has
+    # to merge around them. The line alone is not the proof — an import that
+    # does not resolve is silent by design, that being the point of the '?' —
+    # so a throwaway local.just has to actually show up in --list.
+    grep -q "^import? 'local.just'" "$OUT/justfile" \
+      || { echo "❌ the generated justfile has no 'import? local.just'"; exit 1; }
+    printf '# probe\nprobe-local:\n    @true\n' > "$OUT/local.just"
+    just --justfile "$OUT/justfile" --working-directory "$OUT" --list | grep -q 'probe-local' \
+      || { echo "❌ local.just is imported but its recipes do not arrive"; exit 1; }
+    rm -f "$OUT/local.just"
+
     # Same for the Python that came out of .jinja templates.
     uv run --no-project python -m compileall -q "$OUT/src" "$OUT/scripts" >/dev/null
 

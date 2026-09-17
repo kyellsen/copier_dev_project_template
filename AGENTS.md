@@ -44,6 +44,9 @@ overlay exists:
    no overlay is applied. An overlay ships its recipes as `project.just`.
 2. `AGENTS.md.jinja` points at `docs/*/AGENTS.md` — an overlay ships its binding
    text rules there, and the canon's nested-AGENTS rule then applies to them.
+3. `import? 'local.just'`, below the overlay's import: the third layer, the
+   project's own recipes, so that neither the template nor an overlay ever has
+   to merge around what one repository invented for itself.
 
 An overlay also brings its own copier answers file, so both layers update
 independently.

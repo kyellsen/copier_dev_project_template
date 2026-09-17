@@ -4,6 +4,12 @@ set dotenv-load
 # project.just here; the '?' keeps this a no-op when there is none.
 import? 'project.just'
 
+# The project's own recipes -- what neither the template nor an overlay knows
+# about. Kept apart so a template update never has to merge around them. A
+# recipe this file also defines cannot be overridden from there: just takes the
+# importing file's definition, so `test` and its siblings stay in this file.
+import? 'local.just'
+
 # === Default ===
 # --unsorted preserves the section order of this file, so a first-time reader
 # meets the recipes in the order they are needed rather than alphabetically.
